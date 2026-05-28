@@ -76,3 +76,83 @@ def test_rag_query_with_filters(client):
     assert resp.status_code == 200
     data = resp.json()
     assert isinstance(data["retrieved_chunks"], list)
+
+
+def test_rag_query_low_confidence_fallback(client):
+    resp = client.post(
+        "/rag/query",
+        json={"question": "What is quantum physics?"},
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "enough context" in data["answer"].lower()
+    assert data["confidence"] < 0.3
+    assert data["citations"] == []
+
+
+def test_rag_query_citations_structure(client):
+    _upload(client, ROWS)
+    resp = client.post(
+        "/rag/query",
+        json={"question": "billing error subscription refund"},
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert isinstance(data["citations"], list)
+    if data["confidence"] >= 0.3:
+        assert len(data["citations"]) > 0
+        for citation in data["citations"]:
+            assert citation.startswith("T-")
+    else:
+        assert data["citations"] == []
+
+
+def test_rag_query_returns_retrieved_chunks(client):
+    _upload(client, ROWS)
+    resp = client.post(
+        "/rag/query",
+        json={"question": "billing error", "top_k": 3},
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert len(data["retrieved_chunks"]) <= 3
+    for chunk in data["retrieved_chunks"]:
+        assert "chunk_id" in chunk
+        assert "ticket_id" in chunk
+        assert "score" in chunk
+        assert "preview" in chunk
+
+
+def test_rag_query_logs_estimated_cost(client):
+    _upload(client, ROWS)
+    resp = client.post(
+        "/rag/query",
+        json={"question": "billing error"},
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "estimated_cost_usd" in data
+    assert data["estimated_cost_usd"] == 0.0  # mock provider
+
+
+def test_rag_query_filter_no_match(client):
+    _upload(client, ROWS)
+    resp = client.post(
+        "/rag/query",
+        json={
+            "question": "billing error",
+            "filters": {"product_area": "Nonexistent"},
+        },
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "enough context" in data["answer"].lower()
+
+
+def test_rag_query_records_in_db(client):
+    _upload(client, ROWS)
+    client.post("/rag/query", json={"question": "billing error"})
+    resp = client.get("/dashboard/retrieval")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["total_queries"] >= 1

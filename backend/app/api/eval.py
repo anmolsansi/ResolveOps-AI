@@ -43,7 +43,6 @@ def run_eval(req: EvalRunRequest, db: Session = Depends(get_db)) -> EvalRunRespo
 
         scores = [c["score"] for c in chunks]
         confidence = compute_confidence(scores)
-        elapsed_ms = int((time.time() - start) * 1000)
 
         if confidence >= settings.low_confidence_threshold and chunks:
             contexts = [{"ticket_id": c["ticket_id"], "text": c["text"]} for c in chunks]
@@ -58,6 +57,7 @@ def run_eval(req: EvalRunRequest, db: Session = Depends(get_db)) -> EvalRunRespo
             cited_ids = []
             has_citation = False
 
+        elapsed_ms = int((time.time() - start) * 1000)
         is_pass = has_citation and confidence >= settings.low_confidence_threshold
         if is_pass:
             passed += 1

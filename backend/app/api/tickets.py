@@ -28,7 +28,7 @@ REQUIRED_COLUMNS = [
 
 REQUIRED_FIELDS = [
     "id", "title", "body", "product_area", "issue_type",
-    "priority", "customer_tier", "status", "resolution", "created_at",
+    "priority", "customer_tier", "status", "created_at",
 ]
 
 

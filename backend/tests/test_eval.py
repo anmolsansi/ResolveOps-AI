@@ -83,3 +83,53 @@ def test_eval_empty_db(client):
     data = resp.json()
     assert data["total_questions"] == 5
     assert data["failed_count"] == 5
+
+
+def test_eval_run_has_average_confidence(client):
+    _upload(client, ROWS)
+    resp = client.post("/eval/run", json={})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "average_confidence" in data
+    assert isinstance(data["average_confidence"], float)
+
+
+def test_eval_run_has_average_latency(client):
+    _upload(client, ROWS)
+    resp = client.post("/eval/run", json={})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "average_latency_ms" in data
+    assert data["average_latency_ms"] >= 0
+
+
+def test_eval_run_has_results_json(client):
+    _upload(client, ROWS)
+    resp = client.post("/eval/run", json={})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "results_json" in data
+    assert data["results_json"] is not None
+    import json
+    results = json.loads(data["results_json"])
+    assert len(results) == 5
+    for result in results:
+        assert "question" in result
+        assert "passed" in result
+        assert "confidence" in result
+
+
+def test_eval_list_empty(client):
+    resp = client.get("/eval/runs")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data == []
+
+
+def test_eval_run_records_rag_queries(client):
+    _upload(client, ROWS)
+    client.post("/eval/run", json={})
+    resp = client.get("/dashboard/retrieval")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["total_queries"] >= 5

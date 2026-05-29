@@ -8,7 +8,10 @@ from app.core.database import get_db
 from app.models.models import IngestionBatch, RagQuery
 from app.schemas.dashboard import (
     BatchSummary,
+    ChartsResponse,
+    IngestionChartPoint,
     QualityResponse,
+    QueryChartPoint,
     RecentQuery,
     RetrievalResponse,
 )
@@ -106,3 +109,47 @@ def retrieval_metrics(db: Session = Depends(get_db)) -> RetrievalResponse:
             for q in queries[:10]
         ],
     )
+
+
+@router.get("/charts", response_model=ChartsResponse)
+def charts_data(db: Session = Depends(get_db)) -> ChartsResponse:
+    batches = (
+        db.query(IngestionBatch)
+        .order_by(IngestionBatch.started_at.asc())
+        .limit(50)
+        .all()
+    )
+    ingestion_points = [
+        IngestionChartPoint(
+            batch_label=b.filename[:20] + (
+                f" ({b.started_at.strftime('%m/%d')})" if b.started_at else ""
+            ),
+            valid=b.valid_count,
+            invalid=b.invalid_count,
+            duplicate=b.duplicate_count,
+        )
+        for b in batches
+    ]
+
+    queries = (
+        db.query(RagQuery)
+        .order_by(RagQuery.created_at.asc())
+        .limit(200)
+        .all()
+    )
+    query_points = []
+    for q in queries:
+        has_cit = False
+        if q.cited_ticket_ids_json:
+            ids = json.loads(q.cited_ticket_ids_json)
+            has_cit = len(ids) > 0
+        query_points.append(
+            QueryChartPoint(
+                timestamp=q.created_at.isoformat() if q.created_at else "",
+                confidence=round(q.confidence, 4),
+                latency_ms=q.latency_ms,
+                has_citations=has_cit,
+            )
+        )
+
+    return ChartsResponse(ingestion=ingestion_points, queries=query_points)

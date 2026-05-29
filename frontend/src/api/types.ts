@@ -4,6 +4,12 @@ export interface RowError {
   reason: string;
 }
 
+export interface InvalidRow {
+  row: number;
+  data: Record<string, string>;
+  reason: string;
+}
+
 export interface UploadResponse {
   batch_id: string;
   filename: string;
@@ -13,6 +19,7 @@ export interface UploadResponse {
   duplicate_count: number;
   embedding_failure_count: number;
   errors: RowError[];
+  invalid_rows: InvalidRow[];
 }
 
 export interface TicketSummary {
@@ -66,11 +73,19 @@ export interface RagFilters {
   status?: string;
 }
 
+export interface ChunkDebugInfo {
+  cosine_score: number;
+  keyword_boost: number;
+  keyword_hits: number;
+  matched_tokens: string[];
+}
+
 export interface RetrievedChunk {
   chunk_id: string;
   ticket_id: string;
   score: number;
   preview: string;
+  debug: ChunkDebugInfo | null;
 }
 
 export interface RagQueryResponse {
@@ -136,5 +151,31 @@ export interface EvalRunSummary {
   average_confidence: number;
   average_latency_ms: number;
   results_json: string | null;
+  created_at: string;
+}
+
+export interface IngestionChartPoint {
+  batch_label: string;
+  valid: number;
+  invalid: number;
+  duplicate: number;
+}
+
+export interface QueryChartPoint {
+  timestamp: string;
+  confidence: number;
+  latency_ms: number;
+  has_citations: boolean;
+}
+
+export interface ChartsResponse {
+  ingestion: IngestionChartPoint[];
+  queries: QueryChartPoint[];
+}
+
+export interface SavedEvalQuestion {
+  id: string;
+  question: string;
+  filters_json: string | null;
   created_at: string;
 }

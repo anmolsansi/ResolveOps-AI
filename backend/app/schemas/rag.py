@@ -17,11 +17,19 @@ class RagQueryRequest(BaseModel):
     top_k: int = 5
 
 
+class ChunkDebugInfo(BaseModel):
+    cosine_score: float
+    keyword_boost: float
+    keyword_hits: int
+    matched_tokens: list[str]
+
+
 class RetrievedChunk(BaseModel):
     chunk_id: UUID
     ticket_id: str
     score: float
     preview: str
+    debug: ChunkDebugInfo | None = None
 
 
 class RagQueryResponse(BaseModel):

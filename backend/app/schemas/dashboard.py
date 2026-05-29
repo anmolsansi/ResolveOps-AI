@@ -47,3 +47,22 @@ class RetrievalResponse(BaseModel):
     total_estimated_cost_usd: float
     citation_rate: float
     recent_queries: list[RecentQuery]
+
+
+class IngestionChartPoint(BaseModel):
+    batch_label: str
+    valid: int
+    invalid: int
+    duplicate: int
+
+
+class QueryChartPoint(BaseModel):
+    timestamp: str
+    confidence: float
+    latency_ms: int
+    has_citations: bool
+
+
+class ChartsResponse(BaseModel):
+    ingestion: list[IngestionChartPoint]
+    queries: list[QueryChartPoint]

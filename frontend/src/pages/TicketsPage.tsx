@@ -4,6 +4,7 @@ import { listTickets } from "../api/client";
 import type { TicketSummary } from "../api/types";
 import ErrorState from "../components/ErrorState";
 import LoadingState from "../components/LoadingState";
+import { btn, card, colors, input, pageTitle, td, th } from "../styles";
 
 interface State {
   tickets: TicketSummary[];
@@ -80,94 +81,71 @@ export default function TicketsPage() {
 
   return (
     <div>
-      <h1>Tickets</h1>
+      <h1 style={pageTitle}>Tickets</h1>
 
-      <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginBottom: "1rem" }}>
-        <input placeholder="Search..." value={search} onChange={(e) => setSearch(e.target.value)} />
-        <input
-          placeholder="Product Area"
-          value={productArea}
-          onChange={(e) => setProductArea(e.target.value)}
-        />
-        <input
-          placeholder="Issue Type"
-          value={issueType}
-          onChange={(e) => setIssueType(e.target.value)}
-        />
-        <input
-          placeholder="Priority"
-          value={priority}
-          onChange={(e) => setPriority(e.target.value)}
-        />
-        <input
-          placeholder="Customer Tier"
-          value={customerTier}
-          onChange={(e) => setCustomerTier(e.target.value)}
-        />
-        <input
-          placeholder="Status"
-          value={status}
-          onChange={(e) => setStatus(e.target.value)}
-        />
-        <button onClick={handleFilter}>Filter</button>
+      <div style={{ ...card, marginBottom: "1.5rem" }}>
+        <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", alignItems: "center" }}>
+          <input placeholder="Search..." value={search} onChange={(e) => setSearch(e.target.value)} style={input} />
+          <input placeholder="Product Area" value={productArea} onChange={(e) => setProductArea(e.target.value)} style={{ ...input, width: 130 }} />
+          <input placeholder="Issue Type" value={issueType} onChange={(e) => setIssueType(e.target.value)} style={{ ...input, width: 120 }} />
+          <input placeholder="Priority" value={priority} onChange={(e) => setPriority(e.target.value)} style={{ ...input, width: 100 }} />
+          <input placeholder="Tier" value={customerTier} onChange={(e) => setCustomerTier(e.target.value)} style={{ ...input, width: 100 }} />
+          <input placeholder="Status" value={status} onChange={(e) => setStatus(e.target.value)} style={{ ...input, width: 100 }} />
+          <button onClick={handleFilter} style={btn("primary")}>Filter</button>
+        </div>
       </div>
 
       {state.loading && <LoadingState />}
       {state.error && <ErrorState message={state.error} />}
 
       {!state.loading && (
-        <>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead>
-              <tr>
-                <th style={th}>ID</th>
-                <th style={th}>Title</th>
-                <th style={th}>Product Area</th>
-                <th style={th}>Type</th>
-                <th style={th}>Priority</th>
-                <th style={th}>Tier</th>
-                <th style={th}>Status</th>
-                <th style={th}>Created</th>
-              </tr>
-            </thead>
-            <tbody>
-              {state.tickets.map((t) => (
-                <tr key={t.id}>
-                  <td style={td}>
-                    <Link to={`/tickets/${t.id}`}>{t.id}</Link>
-                  </td>
-                  <td style={td}>{t.title}</td>
-                  <td style={td}>{t.product_area}</td>
-                  <td style={td}>{t.issue_type}</td>
-                  <td style={td}>{t.priority}</td>
-                  <td style={td}>{t.customer_tier}</td>
-                  <td style={td}>{t.status}</td>
-                  <td style={td}>{new Date(t.created_at).toLocaleDateString()}</td>
+        <div style={card}>
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <thead>
+                <tr>
+                  <th style={th}>ID</th>
+                  <th style={th}>Title</th>
+                  <th style={th}>Product Area</th>
+                  <th style={th}>Type</th>
+                  <th style={th}>Priority</th>
+                  <th style={th}>Tier</th>
+                  <th style={th}>Status</th>
+                  <th style={th}>Created</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {state.tickets.map((t) => (
+                  <tr key={t.id}>
+                    <td style={td}>
+                      <Link to={`/tickets/${t.id}`} style={{ color: colors.primary, fontWeight: 600 }}>{t.id}</Link>
+                    </td>
+                    <td style={td}>{t.title}</td>
+                    <td style={td}>{t.product_area}</td>
+                    <td style={td}>{t.issue_type}</td>
+                    <td style={td}>{t.priority}</td>
+                    <td style={td}>{t.customer_tier}</td>
+                    <td style={td}>{t.status}</td>
+                    <td style={td}>{new Date(t.created_at).toLocaleDateString()}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
-          <div style={{ marginTop: "1rem", display: "flex", gap: "0.5rem", alignItems: "center" }}>
-            <button disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
+          <div style={{ marginTop: "1rem", display: "flex", gap: "0.5rem", alignItems: "center", justifyContent: "center" }}>
+            <button disabled={page <= 1} onClick={() => setPage((p) => p - 1)} style={{ ...btn("secondary"), opacity: page <= 1 ? 0.4 : 1 }}>
               Prev
             </button>
-            <span>
+            <span style={{ fontSize: "0.875rem", color: colors.textMuted }}>
               Page {page} of {totalPages || 1} ({state.total} total)
             </span>
-            <button disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>
+            <button disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)} style={{ ...btn("secondary"), opacity: page >= totalPages ? 0.4 : 1 }}>
               Next
             </button>
           </div>
-        </>
+        </div>
       )}
     </div>
   );
 }
-
-const th: React.CSSProperties = {
-  textAlign: "left",
-  padding: "0.5rem",
-  borderBottom: "2px solid #ddd",
-};
-const td: React.CSSProperties = { padding: "0.5rem", borderBottom: "1px solid #eee" };

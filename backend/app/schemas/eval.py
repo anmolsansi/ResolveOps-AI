@@ -36,3 +36,20 @@ class EvalRunResponse(BaseModel):
     average_latency_ms: float
     results_json: str | None
     created_at: datetime
+
+
+class SavedEvalQuestionResponse(BaseModel):
+    id: UUID
+    question: str
+    filters_json: str | None
+    created_at: datetime
+
+
+class SavedEvalQuestionCreate(BaseModel):
+    question: str
+    filters: dict[str, str] | None = None
+
+
+class SavedEvalQuestionUpdate(BaseModel):
+    question: str | None = None
+    filters: dict[str, str] | None = None

@@ -4,6 +4,26 @@ import type { UploadResponse } from "../api/types";
 import ErrorState from "../components/ErrorState";
 import LoadingState from "../components/LoadingState";
 import MetricCard from "../components/MetricCard";
+import { btn, card, colors, pageTitle, sectionTitle, td, th } from "../styles";
+
+function downloadInvalidRowsCsv(result: UploadResponse) {
+  if (!result.invalid_rows.length) return;
+  const first = result.invalid_rows[0];
+  const dataKeys = Object.keys(first.data);
+  const headers = ["row", ...dataKeys, "reason"];
+  const rows = result.invalid_rows.map((r) => {
+    const vals = [String(r.row), ...dataKeys.map((k) => `"${(r.data[k] || "").replace(/"/g, '""')}"`), `"${r.reason}"`];
+    return vals.join(",");
+  });
+  const csv = [headers.join(","), ...rows].join("\n");
+  const blob = new Blob([csv], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `invalid_rows_${result.batch_id.slice(0, 8)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
 export default function UploadPage() {
   const [file, setFile] = useState<File | null>(null);
@@ -28,20 +48,23 @@ export default function UploadPage() {
 
   return (
     <div>
-      <h1>Upload Tickets</h1>
-      <div style={{ marginBottom: "1rem" }}>
-        <input
-          type="file"
-          accept=".csv"
-          onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-        />
-        <button
-          onClick={handleUpload}
-          disabled={!file || loading}
-          style={{ marginLeft: "0.5rem", padding: "0.4rem 1rem" }}
-        >
-          Upload
-        </button>
+      <h1 style={pageTitle}>Upload Tickets</h1>
+
+      <div style={{ ...card, marginBottom: "1.5rem" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+          <input
+            type="file"
+            accept=".csv"
+            onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+          />
+          <button
+            onClick={handleUpload}
+            disabled={!file || loading}
+            style={{ ...btn("primary"), opacity: !file || loading ? 0.5 : 1 }}
+          >
+            Upload
+          </button>
+        </div>
       </div>
 
       {loading && <LoadingState message="Uploading and processing..." />}
@@ -49,52 +72,59 @@ export default function UploadPage() {
 
       {result && (
         <div>
-          <h2>Upload Results</h2>
-          <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap", marginBottom: "1rem" }}>
+          <h2 style={sectionTitle}>Upload Results</h2>
+          <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", marginBottom: "1.5rem" }}>
             <MetricCard label="Batch ID" value={result.batch_id.slice(0, 8)} />
             <MetricCard label="Total" value={result.total_count} />
-            <MetricCard label="Valid" value={result.valid_count} />
-            <MetricCard label="Invalid" value={result.invalid_count} />
-            <MetricCard label="Duplicates" value={result.duplicate_count} />
-            <MetricCard label="Embedding Failures" value={result.embedding_failure_count} />
+            <MetricCard label="Valid" value={result.valid_count} accent={colors.success} />
+            <MetricCard label="Invalid" value={result.invalid_count} accent={colors.danger} />
+            <MetricCard label="Duplicates" value={result.duplicate_count} accent={colors.warning} />
+            <MetricCard label="Embedding Failures" value={result.embedding_failure_count} accent={colors.danger} />
           </div>
 
           {result.errors.length > 0 && (
-            <>
-              <h3>Row Errors</h3>
-              <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                <thead>
-                  <tr>
-                    <th style={th}>Row</th>
-                    <th style={th}>Ticket ID</th>
-                    <th style={th}>Reason</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {result.errors.map((err, i) => (
-                    <tr key={i}>
-                      <td style={td}>{err.row}</td>
-                      <td style={td}>{err.ticket_id ?? "-"}</td>
-                      <td style={td}>{err.reason}</td>
+            <div style={{ ...card, marginBottom: "1rem" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
+                <h3 style={{ ...sectionTitle, marginBottom: 0, fontSize: "0.95rem" }}>Row Errors</h3>
+                {result.invalid_rows.length > 0 && (
+                  <button
+                    onClick={() => downloadInvalidRowsCsv(result)}
+                    style={btn("secondary")}
+                  >
+                    Download Invalid Rows CSV
+                  </button>
+                )}
+              </div>
+              <div style={{ overflowX: "auto" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                  <thead>
+                    <tr>
+                      <th style={th}>Row</th>
+                      <th style={th}>Ticket ID</th>
+                      <th style={th}>Reason</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </>
+                  </thead>
+                  <tbody>
+                    {result.errors.map((err, i) => (
+                      <tr key={i}>
+                        <td style={td}>{err.row}</td>
+                        <td style={td}>{err.ticket_id ?? "-"}</td>
+                        <td style={td}>{err.reason}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           )}
 
-          <p style={{ marginTop: "1rem" }}>
-            <a href="/tickets">View uploaded tickets &rarr;</a>
-          </p>
+          <div style={{ ...card, padding: "1rem 1.25rem" }}>
+            <a href="/tickets" style={{ color: colors.primary, fontWeight: 600, textDecoration: "none" }}>
+              View uploaded tickets &rarr;
+            </a>
+          </div>
         </div>
       )}
     </div>
   );
 }
-
-const th: React.CSSProperties = {
-  textAlign: "left",
-  padding: "0.5rem",
-  borderBottom: "2px solid #ddd",
-};
-const td: React.CSSProperties = { padding: "0.5rem", borderBottom: "1px solid #eee" };

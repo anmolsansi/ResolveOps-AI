@@ -1,11 +1,38 @@
 import json
 import math
+import re
 
 from sqlalchemy import and_
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.models.models import Ticket, TicketChunk
 from app.services.providers.factory import get_embedding_provider
+
+KEYWORD_BOOST_PER_HIT = 0.4
+STOPWORDS = frozenset(
+    "a an the is are was were be been being have has had do does did will would "
+    "shall should may might can could and or but not no nor so yet for of in on "
+    "at to from by with about into through during before after above below between "
+    "out off over under again further then once here there when where why how all "
+    "each every both few more most other some such what which who whom this that "
+    "these those i me my myself we our ours ourselves you your yours yourself "
+    "yourselves he him his himself she her hers herself it its itself they them "
+    "their theirs themselves am if up do fix resolve help get set make issue issues "
+    "problem problems question questions".split()
+)
+
+
+def _tokenize(text: str) -> set[str]:
+    return {w for w in re.findall(r"[a-z0-9]+", text.lower()) if w not in STOPWORDS}
+
+
+def _keyword_boost(query_tokens: set[str], chunk_text: str) -> float:
+    if not query_tokens:
+        return 0.0
+    chunk_tokens = _tokenize(chunk_text)
+    hits = len(query_tokens & chunk_tokens)
+    return min(hits * KEYWORD_BOOST_PER_HIT, 1.0)
 
 
 def cosine_similarity(a: list[float], b: list[float]) -> float:
@@ -26,6 +53,10 @@ def _parse_embedding(raw: str | None) -> list[float] | None:
         return None
 
 
+def _is_mock_mode() -> bool:
+    return settings.mock_providers or settings.embedding_provider == "mock"
+
+
 def retrieve_chunks(
     db: Session,
     question: str,
@@ -34,6 +65,8 @@ def retrieve_chunks(
 ) -> list[dict]:
     provider = get_embedding_provider()
     q_embedding = provider.embed_texts([question])[0]
+    use_keyword_boost = _is_mock_mode()
+    query_tokens = _tokenize(question) if use_keyword_boost else set()
 
     filter_conditions = []
     if filters:
@@ -60,6 +93,8 @@ def retrieve_chunks(
         if c_emb is None:
             continue
         score = cosine_similarity(q_embedding, c_emb)
+        if use_keyword_boost:
+            score += _keyword_boost(query_tokens, chunk.text)
         scored.append((score, chunk))
 
     scored.sort(key=lambda x: x[0], reverse=True)

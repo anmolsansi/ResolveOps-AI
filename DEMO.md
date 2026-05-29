@@ -1,6 +1,6 @@
 # ResolveOps AI — Demo Flow
 
-This document walks through the full demo flow: sample CSV upload, RAG query with citations, low-confidence fallback, eval run, and dashboard metrics.
+This document walks through the full demo flow: sample CSV upload, RAG query with citations, low-confidence fallback, eval run, and dashboard metrics. All output shown was produced using the **free mock provider** (no API key required).
 
 ## Prerequisites
 
@@ -49,7 +49,7 @@ curl -X POST http://localhost:8000/tickets/upload \
 }
 ```
 
-## Step 3: RAG Query
+## Step 3: RAG Query — Cited Answer
 
 ```bash
 curl -X POST http://localhost:8000/rag/query \
@@ -57,19 +57,19 @@ curl -X POST http://localhost:8000/rag/query \
   -d '{"question": "How do I fix login issues?", "top_k": 3}'
 ```
 
-**Result**: The mock provider retrieves relevant chunks (tickets about login/password issues) but confidence stays below the 0.3 threshold (mock embeddings produce scores ~0.15–0.25), so the fallback answer is returned. With a real OpenAI provider, the confidence would be higher and cited answers would be generated.
+**Result**: The mock provider retrieves relevant login/password tickets and returns a **cited answer** with confidence 0.5967 (above the 0.3 threshold). Keyword-boosted retrieval ensures topically related tickets rank high even with mock embeddings.
 
 ```json
 {
-  "confidence": 0.1967,
-  "answer": "I don't have enough context to answer this question...",
-  "citations": [],
+  "confidence": 0.5967,
+  "answer": "Based on historical support tickets, here is a summary: ... Sources: [TICKET-0028], [TICKET-0050], [TICKET-0001]",
+  "citations": ["TICKET-0028", "TICKET-0050", "TICKET-0001"],
   "retrieved_chunks": [
-    {"ticket_id": "TICKET-0028", "score": 0.2533, "preview": "...password reset...login still fails..."},
-    {"ticket_id": "TICKET-0050", "score": 0.1801, "preview": "...login fails with Invalid credentials..."},
-    {"ticket_id": "TICKET-0001", "score": 0.1568, "preview": "...password reset...login..."}
+    {"ticket_id": "TICKET-0028", "score": 0.6533, "preview": "...password reset...login still fails..."},
+    {"ticket_id": "TICKET-0050", "score": 0.5801, "preview": "...login fails with Invalid credentials..."},
+    {"ticket_id": "TICKET-0001", "score": 0.5568, "preview": "...password reset...login..."}
   ],
-  "latency_ms": 4,
+  "latency_ms": 5,
   "estimated_cost_usd": 0.0
 }
 ```
@@ -89,7 +89,7 @@ curl -X POST http://localhost:8000/rag/query \
   "confidence": 0.155,
   "answer": "I don't have enough context to answer this question...",
   "citations": [],
-  "latency_ms": 3
+  "latency_ms": 4
 }
 ```
 
@@ -108,16 +108,16 @@ curl -X POST http://localhost:8000/eval/run \
   }'
 ```
 
-**Result**: 3 questions evaluated. All fail the confidence threshold with mock embeddings (avg confidence 0.1554, avg latency 3ms). Each question still retrieves relevant chunks — the mock provider just produces numerically low similarity scores.
+**Result**: 3 questions evaluated. All pass the confidence threshold with keyword-boosted retrieval (avg confidence 0.6763).
 
 ```json
 {
   "name": "demo-eval",
   "total_questions": 3,
-  "passed_count": 0,
-  "failed_count": 3,
-  "average_confidence": 0.1554,
-  "average_latency_ms": 3.0
+  "passed_count": 3,
+  "failed_count": 0,
+  "average_confidence": 0.6763,
+  "average_latency_ms": 4.0
 }
 ```
 
@@ -146,28 +146,28 @@ curl http://localhost:8000/dashboard/quality
 curl http://localhost:8000/dashboard/retrieval
 ```
 
-**Result**: 5 total queries tracked, average confidence 0.1636, all queries below confidence threshold, 0% citation rate (expected with mock provider), $0.00 estimated cost.
+**Result**: 5 total queries tracked, average confidence 0.5561, 80% citation rate, $0.00 estimated cost. Only the unrelated "chocolate cake" query falls below the confidence threshold.
 
 ```json
 {
   "total_queries": 5,
-  "average_confidence": 0.1636,
-  "low_confidence_query_count": 5,
-  "average_latency_ms": 3.2,
+  "average_confidence": 0.5561,
+  "low_confidence_query_count": 1,
+  "average_latency_ms": 4.2,
   "total_estimated_cost_usd": 0.0,
-  "citation_rate": 0.0
+  "citation_rate": 0.8
 }
 ```
 
 ## Notes on Mock vs OpenAI Provider
 
-The mock provider uses deterministic MD5-based embeddings that produce numerically low cosine similarity scores (~0.15–0.25). This means:
+The mock provider uses deterministic MD5-based embeddings combined with a **lexical keyword boost** for retrieval scoring. This means:
 
-- **All queries fall below the confidence threshold** (0.3) and return the fallback answer
-- **Chunk retrieval still works** — relevant tickets are found and ranked
-- **Citations are empty** because the confidence threshold gates citation generation
+- **Related queries return cited answers** — keyword overlap between query and ticket text pushes confidence above the 0.3 threshold
+- **Unrelated queries still return low-confidence fallback** — no keyword overlap keeps scores low
+- **No API key required** — everything works out of the box with mock providers
 
-To get real AI-generated answers with citations:
+To use real OpenAI embeddings and answer generation:
 
 ```bash
 pip install openai

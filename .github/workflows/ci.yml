@@ -54,3 +54,42 @@ jobs:
 
       - name: Build
         run: npm run build
+
+  docker-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build and start services
+        run: docker compose up -d --build
+
+      - name: Wait for backend readiness
+        run: |
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:8000/health; then
+              echo " Backend is ready"
+              exit 0
+            fi
+            echo "Waiting for backend... ($i/30)"
+            sleep 2
+          done
+          echo "Backend failed to start"
+          docker compose logs backend
+          exit 1
+
+      - name: Health check
+        run: |
+          STATUS=$(curl -sf http://localhost:8000/health | python3 -c "import sys,json; print(json.load(sys.stdin)['status'])")
+          [ "$STATUS" = "ok" ] || exit 1
+
+      - name: Upload sample CSV
+        run: |
+          python3 scripts/generate_sample_tickets.py
+          VALID=$(curl -sf -X POST http://localhost:8000/tickets/upload \
+            -F "file=@scripts/sample_tickets.csv" | python3 -c "import sys,json; print(json.load(sys.stdin)['valid_count'])")
+          echo "Uploaded $VALID valid tickets"
+          [ "$VALID" -gt 0 ] || exit 1
+
+      - name: Teardown
+        if: always()
+        run: docker compose down -v

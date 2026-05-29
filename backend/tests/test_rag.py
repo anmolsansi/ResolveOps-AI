@@ -98,13 +98,10 @@ def test_rag_query_citations_structure(client):
     )
     assert resp.status_code == 200
     data = resp.json()
-    assert isinstance(data["citations"], list)
-    if data["confidence"] >= 0.3:
-        assert len(data["citations"]) > 0
-        for citation in data["citations"]:
-            assert citation.startswith("T-")
-    else:
-        assert data["citations"] == []
+    assert data["confidence"] >= 0.3
+    assert len(data["citations"]) > 0
+    for citation in data["citations"]:
+        assert citation.startswith("T-")
 
 
 def test_rag_query_returns_retrieved_chunks(client):
@@ -156,3 +153,37 @@ def test_rag_query_records_in_db(client):
     assert resp.status_code == 200
     data = resp.json()
     assert data["total_queries"] >= 1
+
+
+LOGIN_ROWS = [
+    {
+        "id": f"LOGIN-{i}",
+        "title": "Login fails after password reset",
+        "body": (
+            "User cannot log in after resetting password. "
+            "Login page shows invalid credentials error."
+        ),
+        "product_area": "Auth",
+        "issue_type": "Bug",
+        "priority": "High",
+        "customer_tier": "Enterprise",
+        "status": "Open",
+        "resolution": "",
+        "created_at": f"2025-01-{10 + i:02d}",
+        "resolved_at": "",
+    }
+    for i in range(5)
+]
+
+
+def test_rag_related_query_returns_cited_answer(client):
+    _upload(client, LOGIN_ROWS)
+    resp = client.post(
+        "/rag/query",
+        json={"question": "How to fix login issues?"},
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "enough context" not in data["answer"].lower()
+    assert len(data["citations"]) > 0
+    assert data["confidence"] >= 0.3

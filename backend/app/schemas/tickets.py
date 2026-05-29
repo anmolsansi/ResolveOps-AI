@@ -10,6 +10,12 @@ class RowError(BaseModel):
     reason: str
 
 
+class InvalidRow(BaseModel):
+    row: int
+    data: dict[str, str]
+    reason: str
+
+
 class UploadResponse(BaseModel):
     batch_id: UUID
     filename: str
@@ -19,6 +25,7 @@ class UploadResponse(BaseModel):
     duplicate_count: int
     embedding_failure_count: int
     errors: list[RowError]
+    invalid_rows: list[InvalidRow]
 
 
 class TicketSummary(BaseModel):

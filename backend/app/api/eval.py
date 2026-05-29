@@ -1,13 +1,23 @@
+import csv
+import io
 import json
 import time
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.database import get_db
-from app.models.models import EvalRun, RagQuery
-from app.schemas.eval import EvalQuestion, EvalRunRequest, EvalRunResponse
+from app.models.models import EvalRun, RagQuery, SavedEvalQuestion
+from app.schemas.eval import (
+    EvalQuestion,
+    EvalRunRequest,
+    EvalRunResponse,
+    SavedEvalQuestionCreate,
+    SavedEvalQuestionResponse,
+    SavedEvalQuestionUpdate,
+)
 from app.services.providers.factory import get_answer_provider, get_embedding_provider
 from app.services.retrieval import compute_confidence, retrieve_chunks
 
@@ -142,3 +152,127 @@ def list_eval_runs(db: Session = Depends(get_db)) -> list[EvalRunResponse]:
         )
         for r in runs
     ]
+
+
+@router.get("/runs/{run_id}/export")
+def export_eval_run(
+    run_id: str,
+    format: str = Query("json", pattern="^(json|csv)$"),
+    db: Session = Depends(get_db),
+) -> Response:
+    run = db.query(EvalRun).filter(EvalRun.id == run_id).first()
+    if not run:
+        raise HTTPException(status_code=404, detail="Eval run not found")
+
+    results = json.loads(run.results_json) if run.results_json else []
+
+    if format == "csv":
+        output = io.StringIO()
+        fields = [
+            "question", "passed", "confidence",
+            "latency_ms", "citations", "answer_preview",
+        ]
+        writer = csv.DictWriter(output, fieldnames=fields)
+        writer.writeheader()
+        for r in results:
+            row = dict(r)
+            row["citations"] = "; ".join(row.get("citations", []))
+            writer.writerow(row)
+        return Response(
+            content=output.getvalue(),
+            media_type="text/csv",
+            headers={"Content-Disposition": f'attachment; filename="eval-{run_id}.csv"'},
+        )
+
+    return Response(
+        content=json.dumps(
+            {
+                "id": str(run.id),
+                "name": run.name,
+                "total_questions": run.total_questions,
+                "passed_count": run.passed_count,
+                "failed_count": run.failed_count,
+                "average_confidence": run.average_confidence,
+                "average_latency_ms": run.average_latency_ms,
+                "results": results,
+                "created_at": run.created_at.isoformat() if run.created_at else None,
+            },
+            indent=2,
+        ),
+        media_type="application/json",
+        headers={"Content-Disposition": f'attachment; filename="eval-{run_id}.json"'},
+    )
+
+
+# --- Eval Question CRUD ---
+
+
+@router.get("/questions", response_model=list[SavedEvalQuestionResponse])
+def list_eval_questions(db: Session = Depends(get_db)) -> list[SavedEvalQuestionResponse]:
+    questions = (
+        db.query(SavedEvalQuestion)
+        .order_by(SavedEvalQuestion.created_at.desc())
+        .all()
+    )
+    return [
+        SavedEvalQuestionResponse(
+            id=q.id,
+            question=q.question,
+            filters_json=q.filters_json,
+            created_at=q.created_at,
+        )
+        for q in questions
+    ]
+
+
+@router.post("/questions", response_model=SavedEvalQuestionResponse, status_code=201)
+def create_eval_question(
+    req: SavedEvalQuestionCreate, db: Session = Depends(get_db)
+) -> SavedEvalQuestionResponse:
+    q = SavedEvalQuestion(
+        question=req.question,
+        filters_json=json.dumps(req.filters) if req.filters else None,
+    )
+    db.add(q)
+    db.commit()
+    db.refresh(q)
+    return SavedEvalQuestionResponse(
+        id=q.id,
+        question=q.question,
+        filters_json=q.filters_json,
+        created_at=q.created_at,
+    )
+
+
+@router.put("/questions/{question_id}", response_model=SavedEvalQuestionResponse)
+def update_eval_question(
+    question_id: str,
+    req: SavedEvalQuestionUpdate,
+    db: Session = Depends(get_db),
+) -> SavedEvalQuestionResponse:
+    q = db.query(SavedEvalQuestion).filter(SavedEvalQuestion.id == question_id).first()
+    if not q:
+        raise HTTPException(status_code=404, detail="Question not found")
+    if req.question is not None:
+        q.question = req.question
+    if req.filters is not None:
+        q.filters_json = json.dumps(req.filters) if req.filters else None
+    db.commit()
+    db.refresh(q)
+    return SavedEvalQuestionResponse(
+        id=q.id,
+        question=q.question,
+        filters_json=q.filters_json,
+        created_at=q.created_at,
+    )
+
+
+@router.delete("/questions/{question_id}", status_code=204)
+def delete_eval_question(
+    question_id: str, db: Session = Depends(get_db)
+) -> None:
+    q = db.query(SavedEvalQuestion).filter(SavedEvalQuestion.id == question_id).first()
+    if not q:
+        raise HTTPException(status_code=404, detail="Question not found")
+    db.delete(q)
+    db.commit()

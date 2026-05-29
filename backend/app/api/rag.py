@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.core.database import get_db
 from app.models.models import RagQuery
-from app.schemas.rag import RagQueryRequest, RagQueryResponse, RetrievedChunk
+from app.schemas.rag import ChunkDebugInfo, RagQueryRequest, RagQueryResponse, RetrievedChunk
 from app.services.providers.factory import get_answer_provider, get_embedding_provider
 from app.services.retrieval import compute_confidence, retrieve_chunks
 
@@ -69,6 +69,7 @@ def rag_query(req: RagQueryRequest, db: Session = Depends(get_db)) -> RagQueryRe
             ticket_id=r["ticket_id"],
             score=r["score"],
             preview=r["preview"],
+            debug=ChunkDebugInfo(**r["debug"]) if r.get("debug") else None,
         )
         for r in results
     ]

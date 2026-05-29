@@ -1,9 +1,11 @@
 import type {
+  ChartsResponse,
   EvalRunSummary,
   QualityResponse,
   RagFilters,
   RagQueryResponse,
   RetrievalResponse,
+  SavedEvalQuestion,
   TicketDetail,
   TicketListResponse,
   UploadResponse,
@@ -67,6 +69,10 @@ export async function getRetrievalMetrics(): Promise<RetrievalResponse> {
   return request<RetrievalResponse>("/dashboard/retrieval");
 }
 
+export async function getChartsData(): Promise<ChartsResponse> {
+  return request<ChartsResponse>("/dashboard/charts");
+}
+
 export async function runEval(name?: string): Promise<EvalRunSummary> {
   return request<EvalRunSummary>("/eval/run", {
     method: "POST",
@@ -77,4 +83,43 @@ export async function runEval(name?: string): Promise<EvalRunSummary> {
 
 export async function listEvalRuns(): Promise<EvalRunSummary[]> {
   return request<EvalRunSummary[]>("/eval/runs");
+}
+
+export function getEvalExportUrl(runId: string, format: "csv" | "json"): string {
+  return `${API_BASE}/eval/runs/${runId}/export?format=${format}`;
+}
+
+export async function listEvalQuestions(): Promise<SavedEvalQuestion[]> {
+  return request<SavedEvalQuestion[]>("/eval/questions");
+}
+
+export async function createEvalQuestion(
+  question: string,
+  filters?: Record<string, string>,
+): Promise<SavedEvalQuestion> {
+  return request<SavedEvalQuestion>("/eval/questions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ question, filters: filters || null }),
+  });
+}
+
+export async function updateEvalQuestion(
+  id: string,
+  question: string,
+  filters?: Record<string, string>,
+): Promise<SavedEvalQuestion> {
+  return request<SavedEvalQuestion>(`/eval/questions/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ question, filters: filters || null }),
+  });
+}
+
+export async function deleteEvalQuestion(id: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/eval/questions/${id}`, { method: "DELETE" });
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`API error ${res.status}: ${body}`);
+  }
 }

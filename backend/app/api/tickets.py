@@ -10,6 +10,7 @@ from app.core.database import get_db
 from app.models.models import IngestionBatch, Ticket, TicketChunk
 from app.schemas.tickets import (
     ChunkPreview,
+    InvalidRow,
     RowError,
     TicketDetail,
     TicketListResponse,
@@ -64,6 +65,7 @@ def upload_tickets(file: UploadFile, db: Session = Depends(get_db)) -> UploadRes
     db.flush()
 
     errors: list[RowError] = []
+    invalid_rows: list[InvalidRow] = []
     total = 0
     valid = 0
     invalid = 0
@@ -101,19 +103,27 @@ def upload_tickets(file: UploadFile, db: Session = Depends(get_db)) -> UploadRes
 
         if row_errors:
             invalid += 1
+            reason = "; ".join(row_errors)
             errors.append(
                 RowError(
                     row=row_num,
                     ticket_id=ticket_id or None,
-                    reason="; ".join(row_errors),
+                    reason=reason,
                 )
+            )
+            invalid_rows.append(
+                InvalidRow(row=row_num, data=dict(row), reason=reason)
             )
             continue
 
         if ticket_id in existing_ids or ticket_id in batch_seen_ids:
             duplicate += 1
+            reason = "Duplicate ticket ID"
             errors.append(
-                RowError(row=row_num, ticket_id=ticket_id, reason="Duplicate ticket ID")
+                RowError(row=row_num, ticket_id=ticket_id, reason=reason)
+            )
+            invalid_rows.append(
+                InvalidRow(row=row_num, data=dict(row), reason=reason)
             )
             continue
 
@@ -176,6 +186,7 @@ def upload_tickets(file: UploadFile, db: Session = Depends(get_db)) -> UploadRes
         duplicate_count=duplicate,
         embedding_failure_count=embedding_failures,
         errors=errors,
+        invalid_rows=invalid_rows,
     )
 
 

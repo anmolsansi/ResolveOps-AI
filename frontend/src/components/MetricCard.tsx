@@ -1,21 +1,20 @@
+import { card, colors } from "../styles";
+
 interface MetricCardProps {
   label: string;
   value: string | number;
+  accent?: string;
 }
 
-export default function MetricCard({ label, value }: MetricCardProps) {
+export default function MetricCard({ label, value, accent }: MetricCardProps) {
   return (
-    <div
-      style={{
-        border: "1px solid #ddd",
-        borderRadius: 8,
-        padding: "1rem",
-        minWidth: 140,
-        textAlign: "center",
-      }}
-    >
-      <div style={{ fontSize: "1.5rem", fontWeight: 700 }}>{value}</div>
-      <div style={{ fontSize: "0.85rem", color: "#666", marginTop: 4 }}>{label}</div>
+    <div style={{ ...card, minWidth: 140, textAlign: "center", flex: "1 1 140px" }}>
+      <div style={{ fontSize: "1.6rem", fontWeight: 700, color: accent || colors.primary }}>
+        {value}
+      </div>
+      <div style={{ fontSize: "0.78rem", color: colors.textMuted, marginTop: 4, fontWeight: 500 }}>
+        {label}
+      </div>
     </div>
   );
 }

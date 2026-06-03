@@ -1,9 +1,9 @@
 ---
 name: testing-resolveops-backend
-description: Test the ResolveOps AI backend API end-to-end. Use when verifying RAG, upload, eval, or dashboard changes.
+description: Test the ResolveOps AI backend API and frontend end-to-end. Use when verifying RAG, upload, eval, dashboard, or UI changes.
 ---
 
-# Testing ResolveOps AI Backend
+# Testing ResolveOps AI
 
 ## Local Setup
 
@@ -17,29 +17,52 @@ No external credentials needed for mock mode (default).
 ## Running Tests
 
 ```bash
-# All tests
+# All tests (61 as of V2)
 python -m pytest -v
 
 # Lint
 python -m ruff check .
 
-# Typecheck
+# Typecheck (CI runs with `|| true`, so mypy never fails CI; a couple of
+# pre-existing non-blocking errors exist in retrieval.py / eval.py)
 python -m mypy app --ignore-missing-imports
 ```
 
-## E2E Testing via Shell
-
-The backend is a FastAPI API — no UI changes to test visually. Use `TestClient` or `curl` against a local SQLite DB:
+## Backend for manual / UI testing (SQLite + mock)
 
 ```bash
-# Quick local backend for manual curl testing
-DATABASE_URL="sqlite:///test.db" python -c "
+cd backend
+source .venv/bin/activate
+# Create tables on a throwaway DB
+DATABASE_URL="sqlite:///./test_e2e.db" python -c "
 from app.core.database import Base, engine
-from app.models.models import *
-Base.metadata.create_all(bind=engine)
+import app.models.models
+Base.metadata.create_all(engine)
 "
-DATABASE_URL="sqlite:///test.db" uvicorn app.main:app --port 8000
+# Run the API (mock providers => no OpenAI calls)
+DATABASE_URL="sqlite:///./test_e2e.db" MOCK_PROVIDERS=true uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
+
+To reset between runs: `Base.metadata.drop_all(engine)` then `create_all(engine)`.
+
+## Frontend E2E (V2 has a real UI)
+
+```bash
+cd frontend && npm run dev   # serves http://localhost:5173, proxies API to :8000
+```
+
+Pages: `/` (dashboard charts), `/upload` (CSV + downloadable invalid rows),
+`/tickets` + `/tickets/{id}` (detail), `/rag` (answer, citations, retrieval
+debug panel), `/eval` (question CRUD, run eval, CSV/JSON export).
+
+Seed CSV for tests: `test_upload.csv` at repo root (5 valid login tickets +
+2 invalid rows). For browser file-dialog reliability, copy it to
+`~/Desktop/test_upload.csv` — the dialog remembers that location.
+
+Good full UI flow: upload CSV -> check dashboard charts -> RAG query
+"How to fix login issues?" (expect cited answer, debug boosts) -> click a
+citation -> eval add/edit/delete -> run eval + export -> dashboard trends ->
+cross-domain billing query (expect fallback).
 
 ## Key API Endpoints
 
@@ -47,41 +70,50 @@ DATABASE_URL="sqlite:///test.db" uvicorn app.main:app --port 8000
 |----------|--------|---------|
 | `/health` | GET | Health check |
 | `/tickets/upload` | POST | Upload CSV (multipart file) |
-| `/rag/query` | POST | RAG query with question, filters, top_k |
-| `/eval/run` | POST | Run eval with questions list |
+| `/tickets/{id}` | GET | Ticket detail + chunks |
+| `/rag/query` | POST | RAG query; chunks include nested `debug` (cosine_score, keyword_boost, keyword_hits, matched_tokens) |
+| `/eval/run` | POST | Run eval (uses DEFAULT_EVAL_QUESTIONS if none passed) |
+| `/eval/questions` | GET/POST/PUT/DELETE | Saved eval question CRUD |
+| `/eval/runs/{run_id}/export?format=csv|json` | GET | Export results |
 | `/dashboard/quality` | GET | Ingestion quality metrics |
-| `/dashboard/retrieval` | GET | Retrieval/query metrics |
+| `/dashboard/retrieval` | GET | Retrieval/query metrics + trends |
 
-## Mock Mode Behavior
+Note: in `/rag/query` responses the per-chunk debug fields are nested under a
+`debug` key, e.g. `retrieved_chunks[i].debug.keyword_boost` — not at the top level.
+
+## Mock Mode Behavior (V2)
 
 - Default: `MOCK_PROVIDERS=true`, `EMBEDDING_PROVIDER=mock`
-- Mock embeddings use MD5 hashing (deterministic, low cosine similarity ~0.0-0.2)
-- **Keyword boost** (mock only): adds 0.4 per matching content keyword to retrieval score
-- Confidence threshold: 0.3 (configured in `app/core/config.py`)
-- Related queries (keyword overlap with tickets) → confidence ≥ 0.3 → cited answer
-- Unrelated queries (no keyword overlap) → confidence < 0.3 → fallback answer
-- Cross-domain queries might match if tickets share vocabulary (e.g., "error" appears in both login and billing tickets)
+- Mock embeddings are deterministic with low cosine similarity (~ -0.1 to 0.1)
+- **Keyword boost (mock only) is FRACTIONAL OVERLAP**, capped at `MAX_KEYWORD_BOOST = 0.7`:
+  roughly `(matching_query_tokens / total_query_tokens) * 0.7`. A single shared
+  token in a multi-token query yields a partial boost (e.g. ~0.23-0.35), NOT a
+  full one. (This replaced the old additive `0.4 per hit`.)
+- Confidence threshold: 0.3 (`app/core/config.py: low_confidence_threshold`)
+- Related query (strong keyword overlap) -> confidence >= 0.3 -> cited answer
+- Unrelated query -> confidence < 0.3 -> fallback answer
+- **Cross-domain no longer leaks**: a billing query against login-only tickets
+  stays below 0.3 (only the shared token "error" gives a small fractional boost),
+  returning the fallback with no citations. Use this as the regression check.
 
-## Testing RAG Confidence Changes
+## Gotcha: UUID path params on SQLite
 
-When testing retrieval/confidence changes:
-1. Upload domain-specific tickets (e.g., all about "login" or all about "billing")
-2. Query with a related question → expect confidence ≥ 0.3, citations > 0
-3. Query with a completely unrelated question (e.g., "chocolate cake recipe") → expect confidence < 0.3, empty citations
-4. Check cross-domain: query one domain against another domain's tickets → may or may not match depending on shared vocabulary
+Models use `UUID(as_uuid=True)` PKs. FastAPI path params that feed ORM filters
+MUST be typed `uuid.UUID`, not `str` — a `str` causes
+`AttributeError: 'str' object has no attribute 'hex'` (500) on SQLite for
+PUT/DELETE/export by id. Type them as `uuid.UUID` so FastAPI coerces the value.
 
 ## Docker Testing
 
 ```bash
 docker compose up -d --build
-# Wait for backend healthcheck
 curl -sf http://localhost:8000/health
-# Teardown
 docker compose down -v
 ```
 
-The backend Dockerfile copies all source before `pip install .` (required for alembic to import app modules). The image includes `curl` for healthchecks.
+The Dockerfile copies all source before `pip install .` (alembic needs to import
+app modules). The image includes `curl` for healthchecks.
 
 ## Devin Secrets Needed
 
-None for mock mode testing. For OpenAI provider testing, `OPENAI_API_KEY` would be needed.
+None for mock mode. For OpenAI provider testing, `OPENAI_API_KEY` would be needed.

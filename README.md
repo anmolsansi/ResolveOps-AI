@@ -6,8 +6,8 @@ AI-powered support intelligence platform that ingests historical support tickets
 
 ```
 ┌──────────────┐     ┌──────────────┐     ┌──────────────┐
-│   Frontend   │────▶│   Backend    │────▶│  PostgreSQL   │
-│  React + TS  │     │   FastAPI    │     │   Database    │
+│   Frontend   │────▶│   Backend    │────▶│  PostgreSQL  │
+│  React + TS  │     │   FastAPI    │     │   Database   │
 │  Vite dev    │     │   Uvicorn    │     │              │
 │  port 5173   │     │   port 8000  │     │   port 5432  │
 └──────────────┘     └──────────────┘     └──────────────┘

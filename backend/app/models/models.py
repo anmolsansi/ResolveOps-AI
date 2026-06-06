@@ -2,6 +2,7 @@ import uuid
 from datetime import datetime
 
 from sqlalchemy import (
+    Boolean,
     DateTime,
     Float,
     ForeignKey,
@@ -98,6 +99,15 @@ class RagQuery(Base):
     confidence: Mapped[float] = mapped_column(Float, default=0.0)
     latency_ms: Mapped[int] = mapped_column(Integer, default=0)
     estimated_cost_usd: Mapped[float] = mapped_column(Float, default=0.0)
+    hallucination_risk: Mapped[float] = mapped_column(Float, default=0.0)
+    citation_coverage: Mapped[float] = mapped_column(Float, default=0.0)
+    retrieval_precision: Mapped[float] = mapped_column(Float, default=0.0)
+    answer_completeness: Mapped[float] = mapped_column(Float, default=0.0)
+    product_area: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    provider: Mapped[str] = mapped_column(String(100), default="")
+    model: Mapped[str] = mapped_column(String(200), default="")
+    is_fallback: Mapped[bool] = mapped_column(Boolean, default=False)
+    feedback: Mapped[str | None] = mapped_column(String(50), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
 

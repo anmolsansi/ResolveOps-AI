@@ -1,6 +1,13 @@
 import type {
   ChartsResponse,
+  CostResponse,
+  EvalCompareResponse,
+  EvalConfig,
   EvalRunSummary,
+  FailedQueriesResponse,
+  FeedbackResponse,
+  FeedbackValue,
+  QualityByAreaResponse,
   QualityResponse,
   RagFilters,
   RagQueryResponse,
@@ -61,8 +68,31 @@ export async function ragQuery(
   });
 }
 
+export async function submitFeedback(
+  queryId: string,
+  feedback: FeedbackValue,
+): Promise<FeedbackResponse> {
+  return request<FeedbackResponse>(`/rag/queries/${queryId}/feedback`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ feedback }),
+  });
+}
+
 export async function getQualityMetrics(): Promise<QualityResponse> {
   return request<QualityResponse>("/dashboard/quality");
+}
+
+export async function getCostMetrics(): Promise<CostResponse> {
+  return request<CostResponse>("/dashboard/cost");
+}
+
+export async function getQualityByArea(): Promise<QualityByAreaResponse> {
+  return request<QualityByAreaResponse>("/dashboard/quality-by-area");
+}
+
+export async function getFailedQueries(): Promise<FailedQueriesResponse> {
+  return request<FailedQueriesResponse>("/dashboard/failed-queries");
 }
 
 export async function getRetrievalMetrics(): Promise<RetrievalResponse> {
@@ -83,6 +113,18 @@ export async function runEval(name?: string): Promise<EvalRunSummary> {
 
 export async function listEvalRuns(): Promise<EvalRunSummary[]> {
   return request<EvalRunSummary[]>("/eval/runs");
+}
+
+export async function compareEval(
+  configA: EvalConfig,
+  configB: EvalConfig,
+  name?: string,
+): Promise<EvalCompareResponse> {
+  return request<EvalCompareResponse>("/eval/compare", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name, config_a: configA, config_b: configB }),
+  });
 }
 
 export function getEvalExportUrl(runId: string, format: "csv" | "json"): string {

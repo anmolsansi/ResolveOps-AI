@@ -120,6 +120,7 @@ def retrieve_chunks(
             {
                 "chunk_id": chunk.id,
                 "ticket_id": chunk.ticket_id,
+                "product_area": chunk.ticket.product_area if chunk.ticket else None,
                 "score": round(score, 4),
                 "preview": chunk.text[:300],
                 "text": chunk.text,

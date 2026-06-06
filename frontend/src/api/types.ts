@@ -88,13 +88,33 @@ export interface RetrievedChunk {
   debug: ChunkDebugInfo | null;
 }
 
+export interface QualityScores {
+  hallucination_risk: number;
+  citation_coverage: number;
+  retrieval_precision: number;
+  answer_completeness: number;
+}
+
+export type FeedbackValue = "helpful" | "not_helpful" | "wrong_citation";
+
 export interface RagQueryResponse {
+  query_id: string;
   answer: string;
   citations: string[];
   confidence: number;
   retrieved_chunks: RetrievedChunk[];
   latency_ms: number;
   estimated_cost_usd: number;
+  provider: string;
+  model: string;
+  product_area: string | null;
+  is_fallback: boolean;
+  quality: QualityScores;
+}
+
+export interface FeedbackResponse {
+  query_id: string;
+  feedback: FeedbackValue;
 }
 
 export interface BatchSummary {
@@ -137,9 +157,59 @@ export interface RetrievalResponse {
   average_confidence: number;
   low_confidence_query_count: number;
   average_latency_ms: number;
+  latency_p50_ms: number;
+  latency_p95_ms: number;
+  latency_p99_ms: number;
   total_estimated_cost_usd: number;
   citation_rate: number;
+  average_hallucination_risk: number;
+  average_citation_coverage: number;
+  average_retrieval_precision: number;
+  average_answer_completeness: number;
   recent_queries: RecentQuery[];
+}
+
+export interface CostByModel {
+  provider: string;
+  model: string;
+  query_count: number;
+  total_cost_usd: number;
+}
+
+export interface CostResponse {
+  total_estimated_cost_usd: number;
+  total_queries: number;
+  by_model: CostByModel[];
+}
+
+export interface ProductAreaQuality {
+  product_area: string;
+  query_count: number;
+  average_confidence: number;
+  average_hallucination_risk: number;
+  average_citation_coverage: number;
+  average_retrieval_precision: number;
+  average_answer_completeness: number;
+  citation_rate: number;
+}
+
+export interface QualityByAreaResponse {
+  areas: ProductAreaQuality[];
+}
+
+export interface FailedQuery {
+  id: string;
+  question: string;
+  confidence: number;
+  reason: string;
+  feedback: FeedbackValue | null;
+  product_area: string | null;
+  created_at: string;
+}
+
+export interface FailedQueriesResponse {
+  count: number;
+  items: FailedQuery[];
 }
 
 export interface EvalRunSummary {
@@ -178,4 +248,42 @@ export interface SavedEvalQuestion {
   question: string;
   filters_json: string | null;
   created_at: string;
+}
+
+export interface EvalConfig {
+  label: string;
+  top_k: number;
+  threshold: number;
+}
+
+export interface EvalConfigResult {
+  label: string;
+  top_k: number;
+  threshold: number;
+  passed_count: number;
+  failed_count: number;
+  average_confidence: number;
+  average_latency_ms: number;
+  average_hallucination_risk: number;
+}
+
+export interface EvalQuestionDelta {
+  question: string;
+  confidence_a: number;
+  confidence_b: number;
+  confidence_delta: number;
+  passed_a: boolean;
+  passed_b: boolean;
+}
+
+export interface EvalCompareResponse {
+  name: string;
+  total_questions: number;
+  config_a: EvalConfigResult;
+  config_b: EvalConfigResult;
+  passed_delta: number;
+  confidence_delta: number;
+  latency_delta_ms: number;
+  hallucination_risk_delta: number;
+  per_question: EvalQuestionDelta[];
 }

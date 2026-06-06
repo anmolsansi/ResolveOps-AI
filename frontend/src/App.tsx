@@ -3,6 +3,7 @@ import AppLayout from "./components/AppLayout";
 import DashboardPage from "./pages/DashboardPage";
 import EvalRunsPage from "./pages/EvalRunsPage";
 import RagPlaygroundPage from "./pages/RagPlaygroundPage";
+import ReliabilityPage from "./pages/ReliabilityPage";
 import TicketDetailPage from "./pages/TicketDetailPage";
 import TicketsPage from "./pages/TicketsPage";
 import UploadPage from "./pages/UploadPage";
@@ -17,6 +18,7 @@ export default function App() {
           <Route path="/tickets" element={<TicketsPage />} />
           <Route path="/tickets/:id" element={<TicketDetailPage />} />
           <Route path="/rag" element={<RagPlaygroundPage />} />
+          <Route path="/reliability" element={<ReliabilityPage />} />
           <Route path="/eval" element={<EvalRunsPage />} />
         </Route>
       </Routes>

@@ -12,17 +12,29 @@ from app.core.config import settings
 from app.core.database import get_db
 from app.models.models import EvalRun, RagQuery, SavedEvalQuestion
 from app.schemas.eval import (
+    ConfigResult,
+    EvalCompareRequest,
+    EvalCompareResponse,
+    EvalConfig,
     EvalQuestion,
     EvalRunRequest,
     EvalRunResponse,
+    QuestionDelta,
     SavedEvalQuestionCreate,
     SavedEvalQuestionResponse,
     SavedEvalQuestionUpdate,
 )
+from app.services.providers.base import AnswerProvider, EmbeddingProvider
 from app.services.providers.factory import get_answer_provider, get_embedding_provider
+from app.services.quality import compute_quality_metrics
 from app.services.retrieval import compute_confidence, retrieve_chunks
 
 router = APIRouter()
+
+FALLBACK_ANSWER = (
+    "I don't have enough context to answer this question. "
+    "Please upload more support tickets or try a different query."
+)
 
 DEFAULT_EVAL_QUESTIONS = [
     EvalQuestion(question="How do I fix a billing error?"),
@@ -33,78 +45,98 @@ DEFAULT_EVAL_QUESTIONS = [
 ]
 
 
+def _evaluate_question(
+    db: Session,
+    eq: EvalQuestion,
+    top_k: int,
+    threshold: float,
+    embedding_provider: EmbeddingProvider,
+    answer_provider: AnswerProvider,
+    persist: bool,
+) -> dict:
+    start = time.time()
+    filters_dict: dict[str, str | None] = dict(eq.filters or {})
+    chunks = retrieve_chunks(db, eq.question, filters=filters_dict, top_k=top_k)
+
+    scores = [c["score"] for c in chunks]
+    confidence = compute_confidence(scores)
+
+    is_fallback = not (confidence >= threshold and chunks)
+    if not is_fallback:
+        contexts = [{"ticket_id": c["ticket_id"], "text": c["text"]} for c in chunks]
+        answer = answer_provider.generate_answer(eq.question, contexts)
+        cited_ids = list(dict.fromkeys(c["ticket_id"] for c in chunks))
+    else:
+        answer = FALLBACK_ANSWER
+        cited_ids = []
+
+    quality = compute_quality_metrics(eq.question, answer, chunks, cited_ids, is_fallback)
+    elapsed_ms = int((time.time() - start) * 1000)
+    is_pass = len(cited_ids) > 0 and confidence >= threshold
+
+    total_tokens = sum(len(c.get("text", "").split()) for c in chunks) * 4 // 3
+    cost = embedding_provider.estimated_cost(total_tokens) + answer_provider.estimated_cost(
+        total_tokens
+    )
+
+    if persist:
+        db.add(
+            RagQuery(
+                question=eq.question,
+                filters_json=json.dumps(filters_dict) if filters_dict else None,
+                answer=answer,
+                cited_ticket_ids_json=json.dumps(cited_ids),
+                retrieved_chunk_ids_json=json.dumps([str(c["chunk_id"]) for c in chunks]),
+                confidence=confidence,
+                latency_ms=elapsed_ms,
+                estimated_cost_usd=round(cost, 6),
+                hallucination_risk=quality["hallucination_risk"],
+                citation_coverage=quality["citation_coverage"],
+                retrieval_precision=quality["retrieval_precision"],
+                answer_completeness=quality["answer_completeness"],
+                product_area=chunks[0]["product_area"] if chunks else None,
+                provider=answer_provider.name,
+                model=answer_provider.model,
+                is_fallback=is_fallback,
+            )
+        )
+
+    return {
+        "question": eq.question,
+        "passed": is_pass,
+        "confidence": confidence,
+        "latency_ms": elapsed_ms,
+        "citations": cited_ids,
+        "hallucination_risk": quality["hallucination_risk"],
+        "answer_preview": answer[:200],
+    }
+
+
 @router.post("/run", response_model=EvalRunResponse)
 def run_eval(req: EvalRunRequest, db: Session = Depends(get_db)) -> EvalRunResponse:
     questions = req.questions or DEFAULT_EVAL_QUESTIONS
     name = req.name or "eval-run"
 
-    results = []
-    passed = 0
-    failed = 0
-    total_conf = 0.0
-    total_lat = 0
-
     embedding_provider = get_embedding_provider()
     answer_provider = get_answer_provider()
 
-    for eq in questions:
-        start = time.time()
-        filters_dict = eq.filters or {}
-        chunks = retrieve_chunks(db, eq.question, filters=filters_dict, top_k=5)
-
-        scores = [c["score"] for c in chunks]
-        confidence = compute_confidence(scores)
-
-        if confidence >= settings.low_confidence_threshold and chunks:
-            contexts = [{"ticket_id": c["ticket_id"], "text": c["text"]} for c in chunks]
-            answer = answer_provider.generate_answer(eq.question, contexts)
-            cited_ids = list(dict.fromkeys(c["ticket_id"] for c in chunks))
-            has_citation = len(cited_ids) > 0
-        else:
-            answer = (
-                "I don't have enough context to answer this question. "
-                "Please upload more support tickets or try a different query."
-            )
-            cited_ids = []
-            has_citation = False
-
-        elapsed_ms = int((time.time() - start) * 1000)
-        is_pass = has_citation and confidence >= settings.low_confidence_threshold
-        if is_pass:
-            passed += 1
-        else:
-            failed += 1
-
-        total_conf += confidence
-        total_lat += elapsed_ms
-
-        total_tokens = sum(len(c.get("text", "").split()) for c in chunks) * 4 // 3
-        cost = embedding_provider.estimated_cost(total_tokens) + answer_provider.estimated_cost(
-            total_tokens
+    results = [
+        _evaluate_question(
+            db,
+            eq,
+            top_k=settings.default_top_k,
+            threshold=settings.low_confidence_threshold,
+            embedding_provider=embedding_provider,
+            answer_provider=answer_provider,
+            persist=True,
         )
+        for eq in questions
+    ]
 
-        rag_row = RagQuery(
-            question=eq.question,
-            filters_json=json.dumps(filters_dict) if filters_dict else None,
-            answer=answer,
-            cited_ticket_ids_json=json.dumps(cited_ids),
-            retrieved_chunk_ids_json=json.dumps([str(c["chunk_id"]) for c in chunks]),
-            confidence=confidence,
-            latency_ms=elapsed_ms,
-            estimated_cost_usd=round(cost, 6),
-        )
-        db.add(rag_row)
-
-        results.append(
-            {
-                "question": eq.question,
-                "passed": is_pass,
-                "confidence": confidence,
-                "latency_ms": elapsed_ms,
-                "citations": cited_ids,
-                "answer_preview": answer[:200],
-            }
-        )
+    passed = sum(1 for r in results if r["passed"])
+    failed = len(results) - passed
+    total_conf = sum(r["confidence"] for r in results)
+    total_lat = sum(r["latency_ms"] for r in results)
 
     total_q = len(questions)
     avg_conf = total_conf / total_q if total_q > 0 else 0.0
@@ -133,6 +165,84 @@ def run_eval(req: EvalRunRequest, db: Session = Depends(get_db)) -> EvalRunRespo
         average_latency_ms=eval_run.average_latency_ms,
         results_json=eval_run.results_json,
         created_at=eval_run.created_at,
+    )
+
+
+def _run_config(
+    db: Session,
+    questions: list[EvalQuestion],
+    config: EvalConfig,
+    embedding_provider: EmbeddingProvider,
+    answer_provider: AnswerProvider,
+) -> tuple[ConfigResult, list[dict]]:
+    results = [
+        _evaluate_question(
+            db,
+            eq,
+            top_k=config.top_k,
+            threshold=config.threshold,
+            embedding_provider=embedding_provider,
+            answer_provider=answer_provider,
+            persist=False,
+        )
+        for eq in questions
+    ]
+    n = len(results) or 1
+    passed = sum(1 for r in results if r["passed"])
+    summary = ConfigResult(
+        label=config.label,
+        top_k=config.top_k,
+        threshold=config.threshold,
+        passed_count=passed,
+        failed_count=len(results) - passed,
+        average_confidence=round(sum(r["confidence"] for r in results) / n, 4),
+        average_latency_ms=round(sum(r["latency_ms"] for r in results) / n, 2),
+        average_hallucination_risk=round(
+            sum(r["hallucination_risk"] for r in results) / n, 4
+        ),
+    )
+    return summary, results
+
+
+@router.post("/compare", response_model=EvalCompareResponse)
+def compare_eval(req: EvalCompareRequest, db: Session = Depends(get_db)) -> EvalCompareResponse:
+    questions = req.questions or DEFAULT_EVAL_QUESTIONS
+    embedding_provider = get_embedding_provider()
+    answer_provider = get_answer_provider()
+
+    summary_a, results_a = _run_config(db, questions, req.config_a, embedding_provider,
+                                       answer_provider)
+    summary_b, results_b = _run_config(db, questions, req.config_b, embedding_provider,
+                                       answer_provider)
+
+    per_question = [
+        QuestionDelta(
+            question=ra["question"],
+            confidence_a=ra["confidence"],
+            confidence_b=rb["confidence"],
+            confidence_delta=round(rb["confidence"] - ra["confidence"], 4),
+            passed_a=ra["passed"],
+            passed_b=rb["passed"],
+        )
+        for ra, rb in zip(results_a, results_b)
+    ]
+
+    return EvalCompareResponse(
+        name=req.name or "regression-compare",
+        total_questions=len(questions),
+        config_a=summary_a,
+        config_b=summary_b,
+        passed_delta=summary_b.passed_count - summary_a.passed_count,
+        confidence_delta=round(
+            summary_b.average_confidence - summary_a.average_confidence, 4
+        ),
+        latency_delta_ms=round(
+            summary_b.average_latency_ms - summary_a.average_latency_ms, 2
+        ),
+        hallucination_risk_delta=round(
+            summary_b.average_hallucination_risk - summary_a.average_hallucination_risk, 4
+        ),
+        per_question=per_question,
     )
 
 

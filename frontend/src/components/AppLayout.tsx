@@ -6,6 +6,7 @@ const NAV_ITEMS = [
   { to: "/upload", label: "Upload" },
   { to: "/tickets", label: "Tickets" },
   { to: "/rag", label: "RAG Playground" },
+  { to: "/reliability", label: "Reliability" },
   { to: "/eval", label: "Eval Runs" },
 ];
 

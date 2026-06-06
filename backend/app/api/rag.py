@@ -1,17 +1,35 @@
 import json
 import time
+import uuid as _uuid
+from collections import Counter
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.database import get_db
 from app.models.models import RagQuery
-from app.schemas.rag import ChunkDebugInfo, RagQueryRequest, RagQueryResponse, RetrievedChunk
+from app.schemas.rag import (
+    ChunkDebugInfo,
+    FeedbackRequest,
+    FeedbackResponse,
+    QualityScores,
+    RagQueryRequest,
+    RagQueryResponse,
+    RetrievedChunk,
+)
 from app.services.providers.factory import get_answer_provider, get_embedding_provider
+from app.services.quality import compute_quality_metrics
 from app.services.retrieval import compute_confidence, retrieve_chunks
 
 router = APIRouter()
+
+
+def _dominant_product_area(results: list[dict]) -> str | None:
+    areas = [r.get("product_area") for r in results if r.get("product_area")]
+    if not areas:
+        return None
+    return Counter(areas).most_common(1)[0][0]
 
 
 @router.post("/query", response_model=RagQueryResponse)
@@ -30,7 +48,8 @@ def rag_query(req: RagQueryRequest, db: Session = Depends(get_db)) -> RagQueryRe
     answer_provider = get_answer_provider()
     embedding_provider = get_embedding_provider()
 
-    if confidence < settings.low_confidence_threshold or not results:
+    is_fallback = confidence < settings.low_confidence_threshold or not results
+    if is_fallback:
         answer = (
             "I don't have enough context to answer this question. "
             "Please upload more support tickets or try a different query."
@@ -41,8 +60,11 @@ def rag_query(req: RagQueryRequest, db: Session = Depends(get_db)) -> RagQueryRe
             {"ticket_id": r["ticket_id"], "text": r["text"]} for r in results
         ]
         answer = answer_provider.generate_answer(req.question, contexts)
-        cited_ids = list(dict.fromkeys(r["ticket_id"] for r in results))
-        citations = cited_ids
+        citations = list(dict.fromkeys(r["ticket_id"] for r in results))
+
+    quality = compute_quality_metrics(
+        req.question, answer, results, citations, is_fallback
+    )
 
     elapsed_ms = int((time.time() - start) * 1000)
     total_tokens = sum(len(r.get("text", "").split()) for r in results) * 4 // 3
@@ -59,9 +81,18 @@ def rag_query(req: RagQueryRequest, db: Session = Depends(get_db)) -> RagQueryRe
         confidence=confidence,
         latency_ms=elapsed_ms,
         estimated_cost_usd=round(cost, 6),
+        hallucination_risk=quality["hallucination_risk"],
+        citation_coverage=quality["citation_coverage"],
+        retrieval_precision=quality["retrieval_precision"],
+        answer_completeness=quality["answer_completeness"],
+        product_area=_dominant_product_area(results),
+        provider=answer_provider.name,
+        model=answer_provider.model,
+        is_fallback=is_fallback,
     )
     db.add(rag_row)
     db.commit()
+    db.refresh(rag_row)
 
     retrieved = [
         RetrievedChunk(
@@ -75,10 +106,30 @@ def rag_query(req: RagQueryRequest, db: Session = Depends(get_db)) -> RagQueryRe
     ]
 
     return RagQueryResponse(
+        query_id=rag_row.id,
         answer=answer,
         citations=citations,
         confidence=confidence,
         retrieved_chunks=retrieved,
         latency_ms=elapsed_ms,
         estimated_cost_usd=round(cost, 6),
+        provider=rag_row.provider,
+        model=rag_row.model,
+        product_area=rag_row.product_area,
+        is_fallback=is_fallback,
+        quality=QualityScores(**quality),
     )
+
+
+@router.post("/queries/{query_id}/feedback", response_model=FeedbackResponse)
+def submit_feedback(
+    query_id: _uuid.UUID,
+    req: FeedbackRequest,
+    db: Session = Depends(get_db),
+) -> FeedbackResponse:
+    row = db.query(RagQuery).filter(RagQuery.id == query_id).first()
+    if not row:
+        raise HTTPException(status_code=404, detail="Query not found")
+    row.feedback = req.feedback.value
+    db.commit()
+    return FeedbackResponse(query_id=query_id, feedback=req.feedback)

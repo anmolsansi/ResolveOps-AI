@@ -206,12 +206,16 @@ npm run typecheck
 - **Migration errors**: Run `alembic upgrade head` from the `backend/` directory
 - **Mock provider**: No API key needed — the app uses deterministic mock providers by default
 
-## Known MVP Limitations
+## Known Limitations
+
+This is a portfolio MVP, not a production-grade deployment. Current gaps:
 
 - No authentication or authorization
-- Mock providers return deterministic (not AI-generated) answers
+- No production support-tool integrations (e.g. Zendesk, Freshdesk, Intercom); ingestion is CSV-only
+- No background job queue — CSV processing and embedding generation run inline in the request
 - No cloud deployment configuration
-- No real-time updates (polling only)
 - Vector similarity uses cosine similarity on JSON-stored embeddings (not pgvector)
+- `mypy` is non-blocking in CI (`python -m mypy app || true`), so type errors do not fail the build; making it blocking is planned
+- Mock providers return deterministic (not AI-generated) answers by default
+- No real-time updates (polling only)
 - No drag-and-drop file upload
-- No charts or graphs on the dashboard

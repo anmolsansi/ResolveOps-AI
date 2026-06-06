@@ -2,6 +2,7 @@ import csv
 import io
 import json
 import time
+import uuid as _uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import Response
@@ -156,7 +157,7 @@ def list_eval_runs(db: Session = Depends(get_db)) -> list[EvalRunResponse]:
 
 @router.get("/runs/{run_id}/export")
 def export_eval_run(
-    run_id: str,
+    run_id: _uuid.UUID,
     format: str = Query("json", pattern="^(json|csv)$"),
     db: Session = Depends(get_db),
 ) -> Response:
@@ -246,7 +247,7 @@ def create_eval_question(
 
 @router.put("/questions/{question_id}", response_model=SavedEvalQuestionResponse)
 def update_eval_question(
-    question_id: str,
+    question_id: _uuid.UUID,
     req: SavedEvalQuestionUpdate,
     db: Session = Depends(get_db),
 ) -> SavedEvalQuestionResponse:
@@ -269,7 +270,7 @@ def update_eval_question(
 
 @router.delete("/questions/{question_id}", status_code=204)
 def delete_eval_question(
-    question_id: str, db: Session = Depends(get_db)
+    question_id: _uuid.UUID, db: Session = Depends(get_db)
 ) -> None:
     q = db.query(SavedEvalQuestion).filter(SavedEvalQuestion.id == question_id).first()
     if not q:

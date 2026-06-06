@@ -44,9 +44,59 @@ class RetrievalResponse(BaseModel):
     average_confidence: float
     low_confidence_query_count: int
     average_latency_ms: float
+    latency_p50_ms: float
+    latency_p95_ms: float
+    latency_p99_ms: float
     total_estimated_cost_usd: float
     citation_rate: float
+    average_hallucination_risk: float
+    average_citation_coverage: float
+    average_retrieval_precision: float
+    average_answer_completeness: float
     recent_queries: list[RecentQuery]
+
+
+class CostByModel(BaseModel):
+    provider: str
+    model: str
+    query_count: int
+    total_cost_usd: float
+
+
+class CostResponse(BaseModel):
+    total_estimated_cost_usd: float
+    total_queries: int
+    by_model: list[CostByModel]
+
+
+class ProductAreaQuality(BaseModel):
+    product_area: str
+    query_count: int
+    average_confidence: float
+    average_hallucination_risk: float
+    average_citation_coverage: float
+    average_retrieval_precision: float
+    average_answer_completeness: float
+    citation_rate: float
+
+
+class QualityByAreaResponse(BaseModel):
+    areas: list[ProductAreaQuality]
+
+
+class FailedQuery(BaseModel):
+    id: UUID
+    question: str
+    confidence: float
+    reason: str
+    feedback: str | None
+    product_area: str | None
+    created_at: datetime
+
+
+class FailedQueriesResponse(BaseModel):
+    count: int
+    items: list[FailedQuery]
 
 
 class IngestionChartPoint(BaseModel):

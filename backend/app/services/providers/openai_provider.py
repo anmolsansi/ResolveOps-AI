@@ -18,6 +18,9 @@ CHAT_MODEL = "gpt-4o-mini"
 
 
 class OpenAIEmbeddingProvider(EmbeddingProvider):
+    name = "openai"
+    model = EMBEDDING_MODEL
+
     def __init__(self, api_key: str) -> None:
         try:
             from openai import OpenAI
@@ -40,6 +43,9 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
 
 
 class OpenAIAnswerProvider(AnswerProvider):
+    name = "openai"
+    model = CHAT_MODEL
+
     def __init__(self, api_key: str) -> None:
         try:
             from openai import OpenAI

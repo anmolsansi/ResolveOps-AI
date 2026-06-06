@@ -7,6 +7,9 @@ MOCK_EMBEDDING_DIM = 128
 
 
 class MockEmbeddingProvider(EmbeddingProvider):
+    name = "mock"
+    model = "mock-embedding-v1"
+
     def embed_texts(self, texts: list[str]) -> list[list[float]]:
         return [self._deterministic_embedding(t) for t in texts]
 
@@ -28,6 +31,9 @@ class MockEmbeddingProvider(EmbeddingProvider):
 
 
 class MockAnswerProvider(AnswerProvider):
+    name = "mock"
+    model = "mock-answer-v1"
+
     def generate_answer(self, question: str, contexts: list[dict[str, str]]) -> str:
         if not contexts:
             return (

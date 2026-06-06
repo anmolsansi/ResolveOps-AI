@@ -144,11 +144,27 @@ Output: `scripts/sample_tickets.csv`
 | `POST` | `/tickets/upload` | Upload CSV of support tickets |
 | `GET` | `/tickets` | List tickets with filters and pagination |
 | `GET` | `/tickets/{id}` | Get ticket detail with chunk previews |
-| `POST` | `/rag/query` | Ask a question with optional filters |
+| `POST` | `/rag/query` | Ask a question with optional filters (returns quality scores) |
+| `POST` | `/rag/queries/{id}/feedback` | Submit human feedback (helpful / not_helpful / wrong_citation) |
 | `GET` | `/dashboard/quality` | Ingestion quality metrics |
-| `GET` | `/dashboard/retrieval` | RAG retrieval metrics |
+| `GET` | `/dashboard/retrieval` | RAG retrieval metrics + latency p50/p95/p99 + quality averages |
+| `GET` | `/dashboard/cost` | Cost tracking broken down by provider/model |
+| `GET` | `/dashboard/quality-by-area` | Answer-quality breakdown per product area |
+| `GET` | `/dashboard/failed-queries` | Failed-query review queue (low confidence / no citations / negative feedback) |
 | `POST` | `/eval/run` | Run evaluation with default or custom questions |
+| `POST` | `/eval/compare` | Regression eval comparing two retrieval/generation configs |
 | `GET` | `/eval/runs` | List past evaluation runs |
+
+### Reliability platform (V3)
+
+Beyond RAG, the app scores and observes answer quality:
+
+- **Answer-quality metrics** computed per query with deterministic token-overlap heuristics (work in mock mode, no model calls): hallucination risk, citation coverage, retrieval precision, answer completeness.
+- **Observability**: cost tracking by provider/model, latency percentiles (p50/p95/p99), per-product-area quality breakdown.
+- **Human-in-the-loop**: feedback buttons (helpful / not helpful / wrong citation) and a failed-query review queue.
+- **Regression testing**: compare two configs (top-k / threshold) side by side via `/eval/compare`.
+
+These are surfaced in the **Reliability** page in the frontend.
 
 ## Test and Validation Commands
 

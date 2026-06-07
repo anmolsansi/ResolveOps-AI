@@ -1,18 +1,29 @@
 import type {
+  AssistResponse,
   ChartsResponse,
+  ConnectorListResponse,
+  ConnectorSummary,
   CostResponse,
+  DuplicatesResponse,
   EvalCompareResponse,
   EvalConfig,
   EvalRunSummary,
   FailedQueriesResponse,
   FeedbackResponse,
   FeedbackValue,
+  JobListResponse,
+  JobSummary,
+  KbGenerateResponse,
+  KbListResponse,
   QualityByAreaResponse,
   QualityResponse,
   RagFilters,
   RagQueryResponse,
   RetrievalResponse,
+  RunDueResponse,
   SavedEvalQuestion,
+  SlaRisksResponse,
+  SyncResult,
   TicketDetail,
   TicketListResponse,
   UploadResponse,
@@ -164,4 +175,86 @@ export async function deleteEvalQuestion(id: string): Promise<void> {
     const body = await res.text();
     throw new Error(`API error ${res.status}: ${body}`);
   }
+}
+
+// ---------------- V4: workflow integration ----------------
+
+export async function listConnectors(): Promise<ConnectorListResponse> {
+  return request<ConnectorListResponse>("/connectors");
+}
+
+export async function createConnector(
+  provider: string,
+  name: string,
+): Promise<ConnectorSummary> {
+  return request<ConnectorSummary>("/connectors", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ provider, name }),
+  });
+}
+
+export async function deleteConnector(id: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/connectors/${id}`, { method: "DELETE" });
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`API error ${res.status}: ${body}`);
+  }
+}
+
+export async function syncConnector(id: string, limit = 6): Promise<SyncResult> {
+  return request<SyncResult>(`/connectors/${id}/sync?limit=${limit}`, {
+    method: "POST",
+  });
+}
+
+export async function listJobs(): Promise<JobListResponse> {
+  return request<JobListResponse>("/connectors/jobs");
+}
+
+export async function createJob(
+  connectorId: string,
+  intervalMinutes: number,
+): Promise<JobSummary> {
+  return request<JobSummary>(`/connectors/${connectorId}/jobs`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ interval_minutes: intervalMinutes }),
+  });
+}
+
+export async function runDueJobs(limit = 6): Promise<RunDueResponse> {
+  return request<RunDueResponse>(`/connectors/jobs/run-due?limit=${limit}`, {
+    method: "POST",
+  });
+}
+
+export async function getDuplicates(): Promise<DuplicatesResponse> {
+  return request<DuplicatesResponse>("/connectors/duplicates");
+}
+
+export async function assistDraft(payload: {
+  subject: string;
+  body?: string;
+  customer_tier?: string;
+  product_area?: string;
+  top_k?: number;
+}): Promise<AssistResponse> {
+  return request<AssistResponse>("/assist/draft", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function generateKb(): Promise<KbGenerateResponse> {
+  return request<KbGenerateResponse>("/kb/generate", { method: "POST" });
+}
+
+export async function listKbArticles(): Promise<KbListResponse> {
+  return request<KbListResponse>("/kb/articles");
+}
+
+export async function getSlaRisks(): Promise<SlaRisksResponse> {
+  return request<SlaRisksResponse>("/sla/risks");
 }

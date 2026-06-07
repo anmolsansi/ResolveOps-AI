@@ -287,3 +287,133 @@ export interface EvalCompareResponse {
   hallucination_risk_delta: number;
   per_question: EvalQuestionDelta[];
 }
+
+// ---------------- V4: workflow integration ----------------
+
+export interface ConnectorSummary {
+  id: string;
+  provider: string;
+  name: string;
+  cursor: string | null;
+  enabled: boolean;
+  last_synced_at: string | null;
+  total_imported: number;
+  created_at: string;
+}
+
+export interface ConnectorListResponse {
+  items: ConnectorSummary[];
+}
+
+export interface SyncResult {
+  connector_id: string;
+  batch_id: string;
+  fetched: number;
+  imported: number;
+  duplicate_id: number;
+  duplicate_semantic: number;
+  embedding_failures: number;
+  cursor: string;
+  imported_ids: string[];
+}
+
+export interface JobSummary {
+  id: string;
+  connector_id: string;
+  interval_minutes: number;
+  enabled: boolean;
+  next_run_at: string;
+  last_run_at: string | null;
+  last_status: string | null;
+  last_imported: number;
+  created_at: string;
+}
+
+export interface JobListResponse {
+  items: JobSummary[];
+}
+
+export interface RunDueResponse {
+  ran: number;
+  results: SyncResult[];
+}
+
+export interface DuplicateTicket {
+  id: string;
+  title: string;
+  product_area: string;
+}
+
+export interface DuplicateCluster {
+  ticket_ids: string[];
+  size: number;
+  max_similarity: number;
+  tickets: DuplicateTicket[];
+}
+
+export interface DuplicatesResponse {
+  clusters: DuplicateCluster[];
+}
+
+export type Escalation = "answer" | "ask_clarification" | "route_to_human";
+
+export interface AssistRetrieved {
+  ticket_id: string;
+  score: number;
+  preview: string;
+  product_area: string | null;
+}
+
+export interface AssistResponse {
+  recommendation: Escalation;
+  recommendation_reason: string;
+  confidence: number;
+  customer_facing_draft: string;
+  internal_note: string;
+  citations: string[];
+  tier_guidance: string;
+  retrieved: AssistRetrieved[];
+}
+
+export interface KbArticle {
+  id: string;
+  title: string;
+  product_area: string;
+  issue_type: string;
+  summary: string;
+  resolution_steps: string;
+  source_ticket_ids: string[];
+  ticket_count: number;
+  created_at: string;
+}
+
+export interface KbListResponse {
+  items: KbArticle[];
+}
+
+export interface KbGenerateResponse {
+  generated: number;
+  items: KbArticle[];
+}
+
+export interface SlaRisk {
+  ticket_id: string;
+  title: string;
+  product_area: string;
+  priority: string;
+  customer_tier: string;
+  status: string;
+  hours_open: number;
+  sla_hours: number;
+  due_in_hours: number;
+  breached: boolean;
+  risk_score: number;
+  risk_level: string;
+  reason: string;
+}
+
+export interface SlaRisksResponse {
+  items: SlaRisk[];
+  breached_count: number;
+  high_risk_count: number;
+}

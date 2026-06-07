@@ -154,6 +154,29 @@ Output: `scripts/sample_tickets.csv`
 | `POST` | `/eval/run` | Run evaluation with default or custom questions |
 | `POST` | `/eval/compare` | Regression eval comparing two retrieval/generation configs |
 | `GET` | `/eval/runs` | List past evaluation runs |
+| `POST` | `/connectors` | Register a Zendesk/Freshdesk/Intercom connector |
+| `GET` | `/connectors` | List connectors |
+| `DELETE` | `/connectors/{id}` | Delete a connector and its jobs |
+| `POST` | `/connectors/{id}/sync` | Incremental (cursor-based) sync from a connector |
+| `POST` | `/connectors/{id}/jobs` | Schedule a recurring ingestion job |
+| `GET` | `/connectors/jobs` | List scheduled ingestion jobs |
+| `POST` | `/connectors/jobs/run-due` | Run all due scheduled jobs |
+| `GET` | `/connectors/duplicates` | Semantic duplicate clusters across tickets |
+| `POST` | `/assist/draft` | Suggested reply + escalation + tier guidance for a live ticket |
+| `POST` | `/kb/generate` | Generate KB articles from resolved tickets |
+| `GET` | `/kb/articles` | List generated KB articles |
+| `GET` | `/sla/risks` | Open tickets ranked by SLA breach risk |
+
+### Workflow integration (V4)
+
+Makes the platform useful for real support teams:
+
+- **Connectors**: pluggable Zendesk / Freshdesk / Intercom import abstraction with deterministic mock sources (real providers slot in via API credentials). Surfaced in the **Connectors** page.
+- **Scheduled ingestion + incremental sync**: connectors track a cursor so each sync imports only new tickets; recurring jobs run on an interval via `/connectors/jobs/run-due`.
+- **Semantic de-duplication**: tickets are de-duplicated on import (cosine similarity over embeddings) and near-duplicate clusters are surfaced for review.
+- **Live ticket assist**: grounded suggested reply, an escalation recommendation (answer / ask clarification / route to human), customer-tier-aware guidance, and separate customer-facing vs. internal-note modes. Surfaced in the **Assist** page.
+- **Knowledge base generation**: resolved tickets are clustered by product area + issue type into KB articles with common resolution steps. Surfaced in the **Knowledge Base** page.
+- **SLA risk detection**: open tickets are scored for SLA breach risk (priority- and tier-weighted). Surfaced in the **SLA Risk** page.
 
 ### Reliability platform (V3)
 
@@ -211,8 +234,9 @@ npm run typecheck
 This is a portfolio MVP, not a production-grade deployment. Current gaps:
 
 - No authentication or authorization
-- No production support-tool integrations (e.g. Zendesk, Freshdesk, Intercom); ingestion is CSV-only
-- No background job queue — CSV processing and embedding generation run inline in the request
+- Support-tool connectors (Zendesk/Freshdesk/Intercom) ship with deterministic **mock** sources for demo; wiring real vendor APIs requires adding credentials and the live `fetch_since` implementation
+- Scheduled ingestion jobs run only when `/connectors/jobs/run-due` is invoked (no always-on scheduler/worker yet)
+- No background job queue — CSV processing, connector syncs, and embedding generation run inline in the request
 - No cloud deployment configuration
 - Vector similarity uses cosine similarity on JSON-stored embeddings (not pgvector)
 - `mypy` is non-blocking in CI (`python -m mypy app || true`), so type errors do not fail the build; making it blocking is planned

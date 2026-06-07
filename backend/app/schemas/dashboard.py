@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class BatchSummary(BaseModel):
@@ -97,6 +97,39 @@ class FailedQuery(BaseModel):
 class FailedQueriesResponse(BaseModel):
     count: int
     items: list[FailedQuery]
+
+
+class FailedQueryReviewRequest(BaseModel):
+    action: str = Field(pattern="^(reviewed|ignored)$")
+    note: str | None = None
+
+
+class FailedQueryActionResponse(BaseModel):
+    query_id: UUID
+    action: str
+    feedback: str | None
+    eval_question_id: UUID | None = None
+
+
+class FeedbackByArea(BaseModel):
+    product_area: str
+    total_feedback: int
+    helpful: int
+    not_helpful: int
+    wrong_citation: int
+    negative_rate: float
+
+
+class FeedbackAnalyticsResponse(BaseModel):
+    total_feedback: int
+    helpful_count: int
+    not_helpful_count: int
+    wrong_citation_count: int
+    reviewed_count: int
+    ignored_count: int
+    helpful_rate: float
+    negative_feedback_rate: float
+    by_product_area: list[FeedbackByArea]
 
 
 class IngestionChartPoint(BaseModel):

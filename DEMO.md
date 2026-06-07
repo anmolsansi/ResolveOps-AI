@@ -1,180 +1,147 @@
-# ResolveOps AI — Demo Flow
+# ResolveOps AI Demo
 
-This document walks through the full demo flow: sample CSV upload, RAG query with citations, low-confidence fallback, eval run, and dashboard metrics. All output shown was produced using the **free mock provider** (no API key required).
+This demo proves the V2 path: local startup, CSV ingestion, cited RAG, low-confidence fallback, eval export, dashboard metrics, retrieval debug, and optional real-provider configuration.
 
-## Prerequisites
-
-```bash
-# Generate sample data (50 valid tickets + 2 intentionally invalid)
-python scripts/generate_sample_tickets.py --include-invalid
-
-# Start services
-docker compose up -d
-
-# Or run locally:
-cd backend && pip install -e ".[dev]" && alembic upgrade head
-uvicorn app.main:app --port 8000
-```
-
-## Step 1: Health Check
+## Fast path with Docker
 
 ```bash
-curl http://localhost:8000/health
+cp .env.example .env
+docker compose up -d --build
 ```
+
+Wait for the backend health check:
+
+```bash
+curl -sf http://localhost:8000/health
+```
+
+Expected response:
 
 ```json
-{"status": "ok", "service": "resolveops-api"}
+{"status":"ok","service":"resolveops-api"}
 ```
 
-## Step 2: Upload Sample CSV
+Generate sample tickets:
 
 ```bash
-curl -X POST http://localhost:8000/tickets/upload \
-  -F "file=@scripts/sample_tickets.csv"
+python3 scripts/generate_sample_tickets.py --count 80
 ```
 
-**Result**: 52 rows processed — 50 valid, 2 invalid (1 missing required fields, 1 bad date format), 0 duplicates, 0 embedding failures. Valid rate: 96.15%.
-
-```json
-{
-  "total_count": 52,
-  "valid_count": 50,
-  "invalid_count": 2,
-  "duplicate_count": 0,
-  "embedding_failure_count": 0,
-  "errors": [
-    {"row": 52, "ticket_id": null, "reason": "Missing required field: id; Missing required field: title; ..."},
-    {"row": 53, "ticket_id": "TICKET-BAD-DATE", "reason": "Invalid created_at date format"}
-  ]
-}
-```
-
-## Step 3: RAG Query — Cited Answer
+Run the V2 smoke validation:
 
 ```bash
-curl -X POST http://localhost:8000/rag/query \
+python3 scripts/v2_api_smoke.py --base-url http://localhost:8000 --csv scripts/sample_tickets.csv
+```
+
+Expected final line:
+
+```text
+V2 smoke validation passed
+```
+
+## Manual API demo
+
+Upload sample tickets:
+
+```bash
+curl -sf -X POST http://localhost:8000/tickets/upload -F "file=@scripts/sample_tickets.csv"
+```
+
+The response should include a positive `valid_count`, zero mock-mode embedding failures, and one ingestion batch ID.
+
+Ask a cited support question:
+
+```bash
+curl -sf -X POST http://localhost:8000/rag/query \
   -H "Content-Type: application/json" \
-  -d '{"question": "How do I fix login issues?", "top_k": 3}'
+  -d '{"question":"Customer has a duplicate invoice charge and needs a billing refund. What fixed this before?","top_k":5}'
 ```
 
-**Result**: The mock provider retrieves relevant login/password tickets and returns a **cited answer** with confidence 0.5967 (above the 0.3 threshold). Keyword-boosted retrieval ensures topically related tickets rank high even with mock embeddings.
+The response should include:
 
-```json
-{
-  "confidence": 0.5967,
-  "answer": "Based on historical support tickets, here is a summary: ... Sources: [TICKET-0028], [TICKET-0050], [TICKET-0001]",
-  "citations": ["TICKET-0028", "TICKET-0050", "TICKET-0001"],
-  "retrieved_chunks": [
-    {"ticket_id": "TICKET-0028", "score": 0.6533, "preview": "...password reset...login still fails..."},
-    {"ticket_id": "TICKET-0050", "score": 0.5801, "preview": "...login fails with Invalid credentials..."},
-    {"ticket_id": "TICKET-0001", "score": 0.5568, "preview": "...password reset...login..."}
-  ],
-  "latency_ms": 5,
-  "estimated_cost_usd": 0.0
-}
-```
+- `citations` with at least one ticket ID.
+- `confidence` at or above the fallback threshold.
+- `retrieved_chunks` with debug details.
+- `quality` scores.
 
-## Step 4: Low-Confidence Fallback
+Ask a low-confidence question:
 
 ```bash
-curl -X POST http://localhost:8000/rag/query \
+curl -sf -X POST http://localhost:8000/rag/query \
   -H "Content-Type: application/json" \
-  -d '{"question": "What is the best recipe for chocolate cake?"}'
+  -d '{"question":"Give me a chocolate cake frosting recipe with bananas and cinnamon.","top_k":3}'
 ```
 
-**Result**: Completely unrelated query. Confidence is 0.155 (well below threshold). System correctly returns fallback answer with no citations.
+The response should include:
 
-```json
-{
-  "confidence": 0.155,
-  "answer": "I don't have enough context to answer this question...",
-  "citations": [],
-  "latency_ms": 4
-}
-```
+- `is_fallback: true`
+- empty `citations`
+- an answer that says there is not enough context
 
-## Step 5: Eval Run
+Run an eval:
 
 ```bash
-curl -X POST http://localhost:8000/eval/run \
+curl -sf -X POST http://localhost:8000/eval/run \
   -H "Content-Type: application/json" \
-  -d '{
-    "name": "demo-eval",
-    "questions": [
-      {"question": "How to resolve billing errors?"},
-      {"question": "What causes SSO login failures?"},
-      {"question": "How to fix webhook delivery issues?"}
-    ]
-  }'
+  -d '{"name":"manual-v2-demo"}'
 ```
 
-**Result**: 3 questions evaluated. All pass the confidence threshold with keyword-boosted retrieval (avg confidence 0.6763).
-
-```json
-{
-  "name": "demo-eval",
-  "total_questions": 3,
-  "passed_count": 3,
-  "failed_count": 0,
-  "average_confidence": 0.6763,
-  "average_latency_ms": 4.0
-}
-```
-
-## Step 6: Dashboard — Ingestion Quality
+Export an eval run by replacing `<run_id>` with the returned ID:
 
 ```bash
-curl http://localhost:8000/dashboard/quality
+curl -sf "http://localhost:8000/eval/runs/<run_id>/export?format=json"
+curl -sf "http://localhost:8000/eval/runs/<run_id>/export?format=csv"
 ```
 
-**Result**: 1 batch, 52 rows seen, 50 valid (96.15%), 2 invalid (3.85%), 0 duplicates.
-
-```json
-{
-  "total_batches": 1,
-  "total_rows_seen": 52,
-  "total_valid_rows": 50,
-  "total_invalid_rows": 2,
-  "valid_rate": 0.9615,
-  "invalid_rate": 0.0385
-}
-```
-
-## Step 7: Dashboard — Retrieval Metrics
+Verify dashboard data:
 
 ```bash
-curl http://localhost:8000/dashboard/retrieval
+curl -sf http://localhost:8000/dashboard/quality
+curl -sf http://localhost:8000/dashboard/retrieval
+curl -sf http://localhost:8000/dashboard/charts
+curl -sf http://localhost:8000/dashboard/cost
+curl -sf http://localhost:8000/dashboard/failed-queries
 ```
 
-**Result**: 5 total queries tracked, average confidence 0.5561, 80% citation rate, $0.00 estimated cost. Only the unrelated "chocolate cake" query falls below the confidence threshold.
+## Frontend demo order
 
-```json
-{
-  "total_queries": 5,
-  "average_confidence": 0.5561,
-  "low_confidence_query_count": 1,
-  "average_latency_ms": 4.2,
-  "total_estimated_cost_usd": 0.0,
-  "citation_rate": 0.8
-}
+Open:
+
+```text
+http://localhost:5173
 ```
 
-## Notes on Mock vs OpenAI Provider
+Then demo these pages in order:
 
-The mock provider uses deterministic MD5-based embeddings combined with a **lexical keyword boost** for retrieval scoring. This means:
+1. Upload: upload `scripts/sample_tickets.csv`, review counts, and download invalid rows when using `--include-invalid`.
+2. Tickets: browse tickets and open a ticket detail page.
+3. RAG Playground: ask the billing question, show cited ticket IDs, and open a cited source ticket.
+4. RAG Playground: expand Retrieval Debug and explain cosine score, keyword boost, keyword hits, and matched tokens.
+5. RAG Playground: send feedback using Helpful, Not helpful, or Wrong citation.
+6. RAG Playground: ask the unrelated cake question and show the insufficient-context fallback.
+7. Eval Runs: run an eval and export JSON or CSV.
+8. Dashboard: review ingestion quality, retrieval metrics, and charts.
+9. Reliability: review quality metrics, cost, failed queries, and regression comparison.
 
-- **Related queries return cited answers** — keyword overlap between query and ticket text pushes confidence above the 0.3 threshold
-- **Unrelated queries still return low-confidence fallback** — no keyword overlap keeps scores low
-- **No API key required** — everything works out of the box with mock providers
+## Real provider demo
 
-To use real OpenAI embeddings and answer generation:
+Mock mode is default and free. To run with a real provider locally:
 
 ```bash
-pip install openai
-export OPENAI_API_KEY="sk-..."
+cd backend
+pip install -e ".[dev,openai]"
 export MOCK_PROVIDERS=false
 export LLM_PROVIDER=openai
 export EMBEDDING_PROVIDER=openai
+export OPENAI_API_KEY=<set-this-in-your-shell>
+alembic upgrade head
+uvicorn app.main:app --reload --port 8000
 ```
 
-Then re-upload tickets (they'll get real OpenAI embeddings) and query again.
+Keep provider credentials in your local shell or `.env`. Do not commit them.
+
+## Cleanup
+
+```bash
+docker compose down -v
+```

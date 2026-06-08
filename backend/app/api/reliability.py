@@ -6,8 +6,11 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from app.models.models import EvalRun, RagQuery, SavedEvalQuestion
+from app.api.eval import DEFAULT_EVAL_QUESTIONS, _run_config
 from app.core.database import get_db
+from app.models.models import EvalRun, RagQuery, SavedEvalQuestion
+from app.schemas.eval import EvalCompareRequest, EvalCompareResponse, QuestionDelta
+from app.services.providers.factory import get_answer_provider, get_embedding_provider
 
 router = APIRouter()
 
@@ -144,6 +147,71 @@ def feedback_analytics(db: Session = Depends(get_db)) -> FeedbackAnalyticsRespon
         negative_feedback_rate=_safe_rate(negative, total),
         by_product_area=by_area,
     )
+
+
+@router.post("/compare", response_model=EvalCompareResponse)
+def run_and_store_comparison(
+    req: EvalCompareRequest,
+    db: Session = Depends(get_db),
+) -> EvalCompareResponse:
+    questions = req.questions or DEFAULT_EVAL_QUESTIONS
+    embedding_provider = get_embedding_provider()
+    answer_provider = get_answer_provider()
+    summary_a, results_a = _run_config(
+        db, questions, req.config_a, embedding_provider, answer_provider
+    )
+    summary_b, results_b = _run_config(
+        db, questions, req.config_b, embedding_provider, answer_provider
+    )
+
+    per_question = [
+        QuestionDelta(
+            question=ra["question"],
+            confidence_a=ra["confidence"],
+            confidence_b=rb["confidence"],
+            confidence_delta=round(rb["confidence"] - ra["confidence"], 4),
+            passed_a=ra["passed"],
+            passed_b=rb["passed"],
+        )
+        for ra, rb in zip(results_a, results_b)
+    ]
+
+    response = EvalCompareResponse(
+        name=req.name or "regression-compare",
+        total_questions=len(questions),
+        config_a=summary_a,
+        config_b=summary_b,
+        passed_delta=summary_b.passed_count - summary_a.passed_count,
+        confidence_delta=round(summary_b.average_confidence - summary_a.average_confidence, 4),
+        latency_delta_ms=round(summary_b.average_latency_ms - summary_a.average_latency_ms, 2),
+        hallucination_risk_delta=round(
+            summary_b.average_hallucination_risk - summary_a.average_hallucination_risk, 4
+        ),
+        per_question=per_question,
+    )
+    stored = {
+        "name": response.name,
+        "config_a": response.config_a.model_dump(),
+        "config_b": response.config_b.model_dump(),
+        "passed_delta": response.passed_delta,
+        "confidence_delta": response.confidence_delta,
+        "latency_delta_ms": response.latency_delta_ms,
+        "hallucination_risk_delta": response.hallucination_risk_delta,
+        "per_question": [item.model_dump() for item in response.per_question],
+    }
+    db.add(
+        EvalRun(
+            name=f"compare:{response.name}",
+            total_questions=response.total_questions,
+            passed_count=response.config_b.passed_count,
+            failed_count=response.config_b.failed_count,
+            average_confidence=response.config_b.average_confidence,
+            average_latency_ms=response.config_b.average_latency_ms,
+            results_json=json.dumps(stored),
+        )
+    )
+    db.commit()
+    return response
 
 
 @router.get("/comparisons", response_model=list[StoredComparisonSummary])

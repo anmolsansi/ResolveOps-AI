@@ -51,6 +51,13 @@ docker-compose.yml Docker Compose for local development
 | `EMBEDDING_PROVIDER` | Embedding provider (`mock` or `openai`) | `mock` |
 | `MOCK_PROVIDERS` | Force mock providers | `true` |
 | `VITE_API_BASE_URL` | Backend URL for frontend | `http://localhost:8000` |
+| `SECRET_KEY` | HMAC signing key for access tokens | `dev-insecure-change-me` |
+| `ACCESS_TOKEN_EXPIRE_MINUTES` | Access token lifetime (minutes) | `720` |
+| `AUTH_REQUIRED` | Reserved flag for gating (V5 governance endpoints always require a token) | `false` |
+| `VECTOR_BACKEND` | Retrieval backend: `auto`, `pgvector`, or `memory` | `auto` |
+| `PII_REDACTION_ENABLED` | Redact PII on ingestion (also runtime-configurable) | `false` |
+| `RETENTION_RAG_QUERY_DAYS` | RAG query retention window in days (`0` = keep forever) | `0` |
+| `RETENTION_AUDIT_LOG_DAYS` | Audit log retention window in days (`0` = keep forever) | `0` |
 
 ## Local Setup (Without Docker)
 
@@ -166,6 +173,33 @@ Output: `scripts/sample_tickets.csv`
 | `POST` | `/kb/generate` | Generate KB articles from resolved tickets |
 | `GET` | `/kb/articles` | List generated KB articles |
 | `GET` | `/sla/risks` | Open tickets ranked by SLA breach risk |
+| `POST` | `/auth/register` | Register a user (first user becomes admin) |
+| `POST` | `/auth/login` | Log in, returns a signed access token |
+| `GET` | `/auth/me` | Current authenticated user |
+| `GET` | `/auth/users` · `PUT /auth/users/{id}/role` | List users / change role (admin) |
+| `GET`/`POST` | `/workspaces` · `/workspaces/{id}/members` | Workspaces and membership management |
+| `GET` | `/audit` | Audit log of governance events (admin) |
+| `POST` | `/pii/scan` | Detect and redact PII in text |
+| `GET`/`PUT` | `/settings` | Read / update runtime model & governance settings |
+| `GET` | `/settings/vector-backend` | Active retrieval backend (pgvector vs memory) |
+| `GET`/`POST` | `/retention` · `/retention/run` | Preview / execute retention purge (admin) |
+| `GET`/`POST` | `/prompts` · `/prompts/{id}/activate` | Versioned prompt management |
+| `GET`/`POST` | `/jobs` · `/jobs/process-pending` | Background job queue (ingestion/embeddings) |
+
+### Enterprise (V5)
+
+Security, scale, and governance:
+
+- **Auth + RBAC**: stdlib PBKDF2 password hashing and HMAC-signed access tokens; global roles (admin / member / viewer). The first registered user becomes admin. Surfaced in the **Account** page. Core demo endpoints stay open; V5 governance endpoints require a token.
+- **Workspaces/teams**: per-workspace membership and roles. Surfaced in the **Workspaces** page.
+- **Audit logs**: immutable record of logins, role changes, settings updates, retention runs, and prompt changes. Surfaced in the **Audit** page.
+- **PII detection & redaction**: regex-based detection (email, phone, SSN, credit card, IP) with redaction, optionally applied on ingestion. Surfaced in the **PII** page.
+- **Configurable retention**: per-resource retention windows for RAG queries and audit logs, with preview and purge. Surfaced in **Settings**.
+- **pgvector-backed retrieval**: indexed nearest-neighbour search on PostgreSQL when the `vector` extension and package are available, with transparent in-memory cosine fallback otherwise (`VECTOR_BACKEND=auto`).
+- **Background job queue**: in-process queue with handlers for embedding backfill, retention runs, PII redaction, and connector sync. Surfaced in the **Jobs** page.
+- **Model/provider settings**: runtime provider/model/threshold configuration. Surfaced in **Settings**.
+- **Prompt/version management**: versioned system prompts with single-active selection, applied to RAG and Assist answers. Surfaced in the **Prompts** page.
+- **Cloud deployment**: one-command [Render](./DEPLOY.md) blueprint (`render.yaml`) provisioning Postgres + backend + frontend.
 
 ### Workflow integration (V4)
 
@@ -231,14 +265,14 @@ npm run typecheck
 
 ## Known Limitations
 
-This is a portfolio MVP, not a production-grade deployment. Current gaps:
+This is a portfolio project. V5 adds enterprise-grade auth/RBAC, workspaces,
+audit logs, PII redaction, retention, pgvector-backed retrieval, a background
+job queue, and a Render deployment blueprint. Remaining gaps:
 
-- No authentication or authorization
 - Support-tool connectors (Zendesk/Freshdesk/Intercom) ship with deterministic **mock** sources for demo; wiring real vendor APIs requires adding credentials and the live `fetch_since` implementation
-- Scheduled ingestion jobs run only when `/connectors/jobs/run-due` is invoked (no always-on scheduler/worker yet)
-- No background job queue — CSV processing, connector syncs, and embedding generation run inline in the request
-- No cloud deployment configuration
-- Vector similarity uses cosine similarity on JSON-stored embeddings (not pgvector)
+- Scheduled ingestion jobs and the background job queue run when triggered (`/connectors/jobs/run-due`, `/jobs/process-pending`); there is no always-on worker/scheduler process yet
+- pgvector retrieval activates only on PostgreSQL with the `vector` extension + package installed; SQLite and key-less demo runs use the in-memory cosine fallback
+- `auth_required` is wired for V5 governance endpoints; core demo endpoints (tickets, RAG, dashboard) remain open so the demo works key-less
 - `mypy` is non-blocking in CI (`python -m mypy app || true`), so type errors do not fail the build; making it blocking is planned
 - Mock providers return deterministic (not AI-generated) answers by default
 - No real-time updates (polling only)

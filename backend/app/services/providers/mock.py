@@ -34,7 +34,12 @@ class MockAnswerProvider(AnswerProvider):
     name = "mock"
     model = "mock-answer-v1"
 
-    def generate_answer(self, question: str, contexts: list[dict[str, str]]) -> str:
+    def generate_answer(
+        self,
+        question: str,
+        contexts: list[dict[str, str]],
+        system_prompt: str | None = None,
+    ) -> str:
         if not contexts:
             return (
                 "I don't have enough context to answer this question. "

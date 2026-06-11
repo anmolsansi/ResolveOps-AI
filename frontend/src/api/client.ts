@@ -1,5 +1,9 @@
 import type {
   AssistResponse,
+  AuditListResponse,
+  BgJobListResponse,
+  BgJobProcessResponse,
+  BgJobResponse,
   ChartsResponse,
   ConnectorListResponse,
   ConnectorSummary,
@@ -15,18 +19,33 @@ import type {
   JobSummary,
   KbGenerateResponse,
   KbListResponse,
+  MemberListResponse,
+  MemberResponse,
+  PiiScanResponse,
+  PromptListResponse,
+  PromptResponse,
   QualityByAreaResponse,
   QualityResponse,
   RagFilters,
   RagQueryResponse,
+  RetentionPreviewResponse,
+  RetentionRunResponse,
   RetrievalResponse,
   RunDueResponse,
   SavedEvalQuestion,
+  SettingsResponse,
+  SettingsUpdate,
   SlaRisksResponse,
   SyncResult,
   TicketDetail,
   TicketListResponse,
+  TokenResponse,
   UploadResponse,
+  UserListResponse,
+  UserResponse,
+  VectorBackendStatus,
+  WorkspaceListResponse,
+  WorkspaceResponse,
 } from "./types";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
@@ -257,4 +276,186 @@ export async function listKbArticles(): Promise<KbListResponse> {
 
 export async function getSlaRisks(): Promise<SlaRisksResponse> {
   return request<SlaRisksResponse>("/sla/risks");
+}
+
+// ---------------- V5: auth + enterprise governance ----------------
+
+const TOKEN_KEY = "resolveops_token";
+
+export function getToken(): string | null {
+  return localStorage.getItem(TOKEN_KEY);
+}
+
+export function setToken(token: string): void {
+  localStorage.setItem(TOKEN_KEY, token);
+}
+
+export function clearToken(): void {
+  localStorage.removeItem(TOKEN_KEY);
+}
+
+function authHeaders(extra?: Record<string, string>): Record<string, string> {
+  const headers: Record<string, string> = { ...(extra || {}) };
+  const token = getToken();
+  if (token) headers.Authorization = `Bearer ${token}`;
+  return headers;
+}
+
+export async function register(
+  email: string,
+  password: string,
+  role?: string,
+): Promise<TokenResponse> {
+  return request<TokenResponse>("/auth/register", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password, role }),
+  });
+}
+
+export async function login(email: string, password: string): Promise<TokenResponse> {
+  return request<TokenResponse>("/auth/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password }),
+  });
+}
+
+export async function getMe(): Promise<UserResponse> {
+  return request<UserResponse>("/auth/me", { headers: authHeaders() });
+}
+
+export async function listUsers(): Promise<UserListResponse> {
+  return request<UserListResponse>("/auth/users", { headers: authHeaders() });
+}
+
+export async function updateUserRole(userId: string, role: string): Promise<UserResponse> {
+  return request<UserResponse>(`/auth/users/${userId}/role`, {
+    method: "PUT",
+    headers: authHeaders({ "Content-Type": "application/json" }),
+    body: JSON.stringify({ role }),
+  });
+}
+
+export async function listWorkspaces(): Promise<WorkspaceListResponse> {
+  return request<WorkspaceListResponse>("/workspaces", { headers: authHeaders() });
+}
+
+export async function createWorkspace(name: string): Promise<WorkspaceResponse> {
+  return request<WorkspaceResponse>("/workspaces", {
+    method: "POST",
+    headers: authHeaders({ "Content-Type": "application/json" }),
+    body: JSON.stringify({ name }),
+  });
+}
+
+export async function listMembers(workspaceId: string): Promise<MemberListResponse> {
+  return request<MemberListResponse>(`/workspaces/${workspaceId}/members`, {
+    headers: authHeaders(),
+  });
+}
+
+export async function addMember(
+  workspaceId: string,
+  email: string,
+  role: string,
+): Promise<MemberResponse> {
+  return request<MemberResponse>(`/workspaces/${workspaceId}/members`, {
+    method: "POST",
+    headers: authHeaders({ "Content-Type": "application/json" }),
+    body: JSON.stringify({ email, role }),
+  });
+}
+
+export async function getAuditLogs(params?: {
+  action?: string;
+  actor_email?: string;
+  limit?: number;
+}): Promise<AuditListResponse> {
+  const qs = new URLSearchParams();
+  for (const [k, v] of Object.entries(params || {})) {
+    if (v !== undefined && v !== "") qs.set(k, String(v));
+  }
+  return request<AuditListResponse>(`/audit?${qs.toString()}`, { headers: authHeaders() });
+}
+
+export async function getSettings(): Promise<SettingsResponse> {
+  return request<SettingsResponse>("/settings", { headers: authHeaders() });
+}
+
+export async function updateSettings(update: SettingsUpdate): Promise<SettingsResponse> {
+  return request<SettingsResponse>("/settings", {
+    method: "PUT",
+    headers: authHeaders({ "Content-Type": "application/json" }),
+    body: JSON.stringify(update),
+  });
+}
+
+export async function getVectorBackend(): Promise<VectorBackendStatus> {
+  return request<VectorBackendStatus>("/settings/vector-backend", { headers: authHeaders() });
+}
+
+export async function previewRetention(): Promise<RetentionPreviewResponse> {
+  return request<RetentionPreviewResponse>("/retention", { headers: authHeaders() });
+}
+
+export async function runRetention(): Promise<RetentionRunResponse> {
+  return request<RetentionRunResponse>("/retention/run", {
+    method: "POST",
+    headers: authHeaders(),
+  });
+}
+
+export async function scanPii(text: string): Promise<PiiScanResponse> {
+  return request<PiiScanResponse>("/pii/scan", {
+    method: "POST",
+    headers: authHeaders({ "Content-Type": "application/json" }),
+    body: JSON.stringify({ text }),
+  });
+}
+
+export async function listPrompts(): Promise<PromptListResponse> {
+  return request<PromptListResponse>("/prompts", { headers: authHeaders() });
+}
+
+export async function createPrompt(
+  name: string,
+  content: string,
+  activate: boolean,
+): Promise<PromptResponse> {
+  return request<PromptResponse>("/prompts", {
+    method: "POST",
+    headers: authHeaders({ "Content-Type": "application/json" }),
+    body: JSON.stringify({ name, content, activate }),
+  });
+}
+
+export async function activatePrompt(promptId: string): Promise<PromptResponse> {
+  return request<PromptResponse>(`/prompts/${promptId}/activate`, {
+    method: "POST",
+    headers: authHeaders(),
+  });
+}
+
+export async function listBgJobs(status?: string): Promise<BgJobListResponse> {
+  const qs = status ? `?status=${encodeURIComponent(status)}` : "";
+  return request<BgJobListResponse>(`/jobs${qs}`, { headers: authHeaders() });
+}
+
+export async function createBgJob(
+  jobType: string,
+  payload?: Record<string, unknown>,
+): Promise<BgJobResponse> {
+  return request<BgJobResponse>("/jobs", {
+    method: "POST",
+    headers: authHeaders({ "Content-Type": "application/json" }),
+    body: JSON.stringify({ job_type: jobType, payload }),
+  });
+}
+
+export async function processPendingJobs(limit = 10): Promise<BgJobProcessResponse> {
+  return request<BgJobProcessResponse>(`/jobs/process-pending?limit=${limit}`, {
+    method: "POST",
+    headers: authHeaders(),
+  });
 }

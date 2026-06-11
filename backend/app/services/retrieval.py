@@ -52,9 +52,12 @@ def _parse_embedding(raw: str | None) -> list[float] | None:
     if not raw:
         return None
     try:
-        return json.loads(raw)
+        parsed = json.loads(raw)
     except (json.JSONDecodeError, TypeError):
         return None
+    if isinstance(parsed, list):
+        return [float(x) for x in parsed]
+    return None
 
 
 def _is_mock_mode() -> bool:
@@ -89,6 +92,14 @@ def retrieve_chunks(
     query = db.query(TicketChunk).join(Ticket, TicketChunk.ticket_id == Ticket.id)
     if filter_conditions:
         query = query.filter(and_(*filter_conditions))
+
+    # pgvector prefilter on Postgres; transparent in-memory fallback otherwise.
+    from app.services.vector import active_backend, pgvector_candidate_ids
+
+    if active_backend(db) == "pgvector":
+        candidate_ids = pgvector_candidate_ids(db, q_embedding, top_k * 4)
+        if candidate_ids:
+            query = query.filter(TicketChunk.id.in_(candidate_ids))
     chunks = query.all()
 
     scored: list[tuple[float, TicketChunk, dict]] = []

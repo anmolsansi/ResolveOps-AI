@@ -11,6 +11,19 @@ class Settings(BaseSettings):
     low_confidence_threshold: float = 0.3
     default_top_k: int = 5
 
+    # V5 — security & governance
+    secret_key: str = "dev-insecure-change-me"
+    access_token_expire_minutes: int = 720
+    auth_required: bool = False
+    # V5 — retrieval backend: "auto" (pgvector on Postgres, else memory),
+    # "pgvector", or "memory"
+    vector_backend: str = "auto"
+    # V5 — PII redaction on ingestion (can be overridden at runtime via settings)
+    pii_redaction_enabled: bool = False
+    # V5 — retention policy defaults (days; 0 disables purge for that resource)
+    retention_rag_query_days: int = 0
+    retention_audit_log_days: int = 0
+
     model_config = {"env_file": ".env", "extra": "ignore"}
 
 

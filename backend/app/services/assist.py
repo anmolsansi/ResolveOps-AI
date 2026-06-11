@@ -4,6 +4,7 @@ Reuses the RAG retrieval pipeline to ground suggestions in resolved tickets and
 produces two modes: a customer-facing draft and an internal agent note.
 """
 from app.core.config import settings
+from app.services.prompts import get_active_prompt_text
 from app.services.providers.factory import get_answer_provider
 from app.services.retrieval import compute_confidence, retrieve_chunks
 
@@ -55,13 +56,14 @@ def build_assist(
         rec_reason = "No strong knowledge-base match — route to a human agent."
 
     provider = get_answer_provider()
+    system_prompt = get_active_prompt_text(db)
     if recommendation == "answer":
         contexts = [{"ticket_id": r["ticket_id"], "text": r["text"]} for r in results]
-        customer_facing = provider.generate_answer(question, contexts)
+        customer_facing = provider.generate_answer(question, contexts, system_prompt=system_prompt)
         customer_citations = retrieved_ticket_ids
     elif recommendation == "ask_clarification":
         contexts = [{"ticket_id": r["ticket_id"], "text": r["text"]} for r in results]
-        draft = provider.generate_answer(question, contexts)
+        draft = provider.generate_answer(question, contexts, system_prompt=system_prompt)
         customer_facing = (
             "To make sure I point you to the right fix, could you confirm the "
             "affected account, when the issue started, and any exact error "

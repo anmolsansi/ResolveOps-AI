@@ -417,3 +417,166 @@ export interface SlaRisksResponse {
   breached_count: number;
   high_risk_count: number;
 }
+
+// ---------------- V5: enterprise (auth, governance) ----------------
+
+export interface TokenResponse {
+  access_token: string;
+  token_type: string;
+  role: string;
+  email: string;
+}
+
+export interface UserResponse {
+  id: string;
+  email: string;
+  role: string;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface UserListResponse {
+  users: UserResponse[];
+}
+
+export interface WorkspaceResponse {
+  id: string;
+  name: string;
+  slug: string;
+  member_count: number;
+  created_at: string;
+}
+
+export interface WorkspaceListResponse {
+  workspaces: WorkspaceResponse[];
+}
+
+export interface MemberResponse {
+  membership_id: string;
+  user_id: string;
+  email: string;
+  role: string;
+  created_at: string;
+}
+
+export interface MemberListResponse {
+  workspace_id: string;
+  members: MemberResponse[];
+}
+
+export interface AuditLogResponse {
+  id: string;
+  actor_email: string;
+  action: string;
+  resource_type: string;
+  resource_id: string | null;
+  workspace_id: string | null;
+  detail: string | null;
+  ip_address: string | null;
+  created_at: string;
+}
+
+export interface AuditListResponse {
+  total: number;
+  logs: AuditLogResponse[];
+}
+
+export interface SettingsResponse {
+  llm_provider: string;
+  embedding_provider: string;
+  llm_model: string;
+  embedding_model: string;
+  low_confidence_threshold: number;
+  default_top_k: number;
+  vector_backend: string;
+  pii_redaction_enabled: boolean;
+  retention_rag_query_days: number;
+  retention_audit_log_days: number;
+  active_prompt_id: string | null;
+}
+
+export interface SettingsUpdate {
+  llm_provider?: string;
+  embedding_provider?: string;
+  llm_model?: string;
+  embedding_model?: string;
+  low_confidence_threshold?: number;
+  default_top_k?: number;
+  vector_backend?: string;
+  pii_redaction_enabled?: boolean;
+  retention_rag_query_days?: number;
+  retention_audit_log_days?: number;
+  active_prompt_id?: string;
+}
+
+export interface VectorBackendStatus {
+  configured: string;
+  dialect: string;
+  pgvector_importable: boolean;
+  extension_present: boolean;
+  active_backend: string;
+  reason: string;
+}
+
+export interface RetentionPreviewResponse {
+  retention_rag_query_days: number;
+  retention_audit_log_days: number;
+  rag_queries_to_purge: number;
+  audit_logs_to_purge: number;
+}
+
+export interface RetentionRunResponse {
+  rag_queries_deleted: number;
+  audit_logs_deleted: number;
+}
+
+export interface PiiMatch {
+  type: string;
+  value: string;
+  start: number;
+  end: number;
+}
+
+export interface PiiScanResponse {
+  matches: PiiMatch[];
+  counts: Record<string, number>;
+  redacted_text: string;
+}
+
+export interface PromptResponse {
+  id: string;
+  name: string;
+  version: number;
+  content: string;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface PromptListResponse {
+  prompts: PromptResponse[];
+  active_id: string | null;
+}
+
+export interface BgJobResponse {
+  id: string;
+  job_type: string;
+  status: string;
+  payload_json: string | null;
+  result_json: string | null;
+  error: string | null;
+  attempts: number;
+  created_at: string;
+  started_at: string | null;
+  finished_at: string | null;
+}
+
+export interface BgJobListResponse {
+  jobs: BgJobResponse[];
+}
+
+export interface BgJobProcessResponse {
+  processed: number;
+  succeeded: number;
+  failed: number;
+  jobs: BgJobResponse[];
+}

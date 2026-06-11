@@ -114,14 +114,19 @@ def upgrade() -> None:
     op.create_index("ix_background_jobs_status", "background_jobs", ["status"])
     op.create_index("ix_background_jobs_created_at", "background_jobs", ["created_at"])
 
-    # pgvector-backed retrieval: only on PostgreSQL with the extension available.
+    # pgvector-backed retrieval: only on PostgreSQL where the extension is
+    # actually installable. We must check availability up front rather than
+    # rely on try/except — a failed CREATE EXTENSION aborts the surrounding
+    # (transactional DDL) migration transaction, which would then fail the
+    # alembic_version update. The JSON-array fallback is used when absent.
     bind = op.get_bind()
     if bind.dialect.name == "postgresql":
-        try:
+        available = bind.execute(
+            sa.text("SELECT 1 FROM pg_available_extensions WHERE name = 'vector'")
+        ).first()
+        if available is not None:
             op.execute("CREATE EXTENSION IF NOT EXISTS vector")
             op.execute("ALTER TABLE ticket_chunks ADD COLUMN IF NOT EXISTS embedding_vec vector")
-        except Exception:  # noqa: BLE001 - extension may be unavailable; JSON fallback stays
-            pass
 
 
 def downgrade() -> None:

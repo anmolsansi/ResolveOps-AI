@@ -57,8 +57,19 @@ jobs:
         run: python3 scripts/generate_sample_tickets.py --count 80 --include-invalid
       - name: Run V1 MVP smoke validation
         run: python3 scripts/v1_api_smoke.py --base-url http://localhost:8000 --frontend-url http://localhost:5173 --csv scripts/sample_tickets.csv
+
+      - name: Reset services before V3 smoke validation
+        run: |
+          docker compose down -v
+          docker compose up -d --build
+          python3 scripts/wait_for_api.py
+
+      - name: Generate sample data for V3
+        run: python3 scripts/generate_sample_tickets.py --count 80 --include-invalid
+
       - name: Run V3 reliability smoke validation
-        run: python3 scripts/v3_api_smoke.py --base-url http://localhost:8000 --csv scripts/sample_tickets.csv
+        run: python3 scripts/v3_api_smoke.py --base-url http://localhost:8000 --csv scripts/sample_tickets.csv      
+      
       - name: Teardown
         if: always()
         run: docker compose down -v

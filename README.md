@@ -1,6 +1,34 @@
 # ResolveOps AI
 
+[![CI](https://github.com/anmolsansi/ResolveOps-AI/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/anmolsansi/ResolveOps-AI/actions/workflows/ci.yml)
+
 AI-powered support intelligence platform that ingests historical support tickets, enables RAG-based question answering with citations, and provides ingestion quality and retrieval metrics dashboards.
+
+## V1 MVP Validation
+
+V1 is considered complete when the CI workflow is green and the Docker smoke path passes from a clean startup.
+
+V1 smoke coverage:
+
+- Backend health check
+- Frontend React shell reachability
+- CSV upload with valid rows, invalid rows, duplicate tracking, chunking, and embeddings
+- Ticket list and ticket detail with chunk previews
+- RAG query with citations, confidence, latency, cost, query ID, and quality scores
+- Low-confidence RAG fallback with no citations
+- Dashboard quality and retrieval metrics
+- Eval run creation and listing
+- Docker startup with Alembic migrations before Uvicorn
+
+Run V1 validation locally:
+
+```bash
+docker compose down -v
+docker compose up -d --build
+python3 scripts/wait_for_api.py
+python3 scripts/generate_sample_tickets.py --count 80 --include-invalid
+python3 scripts/v1_api_smoke.py --base-url http://localhost:8000 --frontend-url http://localhost:5173 --csv scripts/sample_tickets.csv
+```
 
 ## Architecture Overview
 
@@ -254,6 +282,13 @@ npm run lint
 
 # Type check
 npm run typecheck
+```
+
+### Docker Smoke Validation
+
+```bash
+python3 scripts/v1_api_smoke.py --base-url http://localhost:8000 --frontend-url http://localhost:5173 --csv scripts/sample_tickets.csv
+python3 scripts/v3_api_smoke.py --base-url http://localhost:8000 --csv scripts/sample_tickets.csv
 ```
 
 ## Troubleshooting

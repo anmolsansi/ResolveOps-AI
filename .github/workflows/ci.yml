@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main, complete-v2-portfolio-polish, feature-reliability-metrics]
+    branches: [main, complete-v1-validation, complete-v2-portfolio-polish, feature-reliability-metrics]
   pull_request:
     branches: [main]
 
@@ -54,7 +54,9 @@ jobs:
       - name: Wait for backend readiness
         run: python3 scripts/wait_for_api.py
       - name: Generate sample data
-        run: python3 scripts/generate_sample_tickets.py --count 80
+        run: python3 scripts/generate_sample_tickets.py --count 80 --include-invalid
+      - name: Run V1 MVP smoke validation
+        run: python3 scripts/v1_api_smoke.py --base-url http://localhost:8000 --frontend-url http://localhost:5173 --csv scripts/sample_tickets.csv
       - name: Run V3 reliability smoke validation
         run: python3 scripts/v3_api_smoke.py --base-url http://localhost:8000 --csv scripts/sample_tickets.csv
       - name: Teardown

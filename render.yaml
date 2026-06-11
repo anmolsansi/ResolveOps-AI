@@ -1,0 +1,59 @@
+# Render.com blueprint — one-click deploy of ResolveOps AI.
+# Provisions a managed Postgres database, the FastAPI backend (Docker, runs
+# Alembic migrations on boot via entrypoint.sh), and the static frontend.
+#
+# Deploy: push to a Git repo, then in Render: New -> Blueprint -> select repo.
+# See DEPLOY.md for the full walkthrough.
+databases:
+  - name: resolveops-db
+    databaseName: resolveops
+    user: resolveops
+    plan: free
+    postgresMajorVersion: "16"
+
+services:
+  - type: web
+    name: resolveops-backend
+    runtime: docker
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: resolveops-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: AUTH_REQUIRED
+        value: "false"
+      - key: VECTOR_BACKEND
+        value: auto
+      # Mock providers keep the deploy free and key-less. Set MOCK_PROVIDERS
+      # to false and add OPENAI_API_KEY to enable real embeddings/answers.
+      - key: MOCK_PROVIDERS
+        value: "true"
+      - key: LLM_PROVIDER
+        value: mock
+      - key: EMBEDDING_PROVIDER
+        value: mock
+      - key: OPENAI_API_KEY
+        sync: false
+
+  - type: web
+    name: resolveops-frontend
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm ci && npm run build
+    staticPublishPath: ./dist
+    envVars:
+      # Set this to the backend's public URL once it is live, e.g.
+      # https://resolveops-backend.onrender.com (the frontend is a build-time
+      # static bundle, so it must bake in the full URL including scheme).
+      - key: VITE_API_BASE_URL
+        sync: false
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html

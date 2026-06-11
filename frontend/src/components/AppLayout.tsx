@@ -12,6 +12,13 @@ const NAV_ITEMS = [
   { to: "/sla", label: "SLA Risk" },
   { to: "/reliability", label: "Reliability" },
   { to: "/eval", label: "Eval Runs" },
+  { to: "/account", label: "Account" },
+  { to: "/workspaces", label: "Workspaces" },
+  { to: "/prompts", label: "Prompts" },
+  { to: "/jobs", label: "Jobs" },
+  { to: "/pii", label: "PII" },
+  { to: "/settings", label: "Settings" },
+  { to: "/audit", label: "Audit" },
 ];
 
 export default function AppLayout() {
@@ -20,12 +27,13 @@ export default function AppLayout() {
       <nav
         style={{
           display: "flex",
+          flexWrap: "wrap",
           gap: "0.25rem",
-          padding: "0 1.5rem",
+          padding: "0.5rem 1.5rem",
           background: colors.navBg,
           color: "#fff",
           alignItems: "center",
-          height: 56,
+          minHeight: 56,
           borderBottom: "1px solid rgba(255,255,255,0.08)",
         }}
       >

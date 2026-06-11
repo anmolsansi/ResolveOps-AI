@@ -4,7 +4,7 @@ from logging.config import fileConfig
 from sqlalchemy import engine_from_config, pool
 
 from alembic import context
-from app.core.database import Base
+from app.core.database import Base, _normalize_db_url
 from app.models.models import (  # noqa: F401
     EvalRun,
     IngestionBatch,
@@ -19,7 +19,7 @@ if config.config_file_name is not None:
 
 database_url = os.environ.get("DATABASE_URL")
 if database_url:
-    config.set_main_option("sqlalchemy.url", database_url)
+    config.set_main_option("sqlalchemy.url", _normalize_db_url(database_url))
 
 target_metadata = Base.metadata
 

@@ -56,7 +56,12 @@ class OpenAIAnswerProvider(AnswerProvider):
             ) from exc
         self._client = OpenAI(api_key=api_key)
 
-    def generate_answer(self, question: str, contexts: list[dict[str, str]]) -> str:
+    def generate_answer(
+        self,
+        question: str,
+        contexts: list[dict[str, str]],
+        system_prompt: str | None = None,
+    ) -> str:
         if not contexts:
             return (
                 "I don't have enough context to answer this question. "
@@ -68,15 +73,16 @@ class OpenAIAnswerProvider(AnswerProvider):
             for ctx in contexts
         )
 
+        system_content = system_prompt or (
+            "You are a support intelligence assistant. Answer questions using "
+            "ONLY the provided ticket context. Always cite source ticket IDs "
+            "in square brackets like [TICKET-123]. If the context doesn't "
+            "contain enough information, say so clearly."
+        )
         messages = [
             {
                 "role": "system",
-                "content": (
-                    "You are a support intelligence assistant. Answer questions using "
-                    "ONLY the provided ticket context. Always cite source ticket IDs "
-                    "in square brackets like [TICKET-123]. If the context doesn't "
-                    "contain enough information, say so clearly."
-                ),
+                "content": system_content,
             },
             {
                 "role": "user",

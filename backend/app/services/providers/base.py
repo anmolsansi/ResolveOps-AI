@@ -19,7 +19,12 @@ class AnswerProvider(ABC):
     model: str = "unknown"
 
     @abstractmethod
-    def generate_answer(self, question: str, contexts: list[dict[str, str]]) -> str:
+    def generate_answer(
+        self,
+        question: str,
+        contexts: list[dict[str, str]],
+        system_prompt: str | None = None,
+    ) -> str:
         ...
 
     @abstractmethod

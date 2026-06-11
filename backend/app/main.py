@@ -2,14 +2,22 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.assist import router as assist_router
+from app.api.audit import router as audit_router
+from app.api.auth import router as auth_router
 from app.api.connectors import router as connectors_router
 from app.api.dashboard import router as dashboard_router
 from app.api.eval import router as eval_router
 from app.api.health import router as health_router
+from app.api.jobs import router as jobs_router
 from app.api.kb import router as kb_router
+from app.api.pii import router as pii_router
+from app.api.prompts import router as prompts_router
 from app.api.rag import router as rag_router
+from app.api.retention import router as retention_router
+from app.api.settings import router as settings_router
 from app.api.sla import router as sla_router
 from app.api.tickets import router as tickets_router
+from app.api.workspaces import router as workspaces_router
 
 
 def create_app() -> FastAPI:
@@ -30,6 +38,14 @@ def create_app() -> FastAPI:
     application.include_router(assist_router, prefix="/assist", tags=["assist"])
     application.include_router(kb_router, prefix="/kb", tags=["kb"])
     application.include_router(sla_router, prefix="/sla", tags=["sla"])
+    application.include_router(auth_router, prefix="/auth", tags=["auth"])
+    application.include_router(workspaces_router, prefix="/workspaces", tags=["workspaces"])
+    application.include_router(audit_router, prefix="/audit", tags=["audit"])
+    application.include_router(settings_router, prefix="/settings", tags=["settings"])
+    application.include_router(retention_router, prefix="/retention", tags=["retention"])
+    application.include_router(pii_router, prefix="/pii", tags=["pii"])
+    application.include_router(prompts_router, prefix="/prompts", tags=["prompts"])
+    application.include_router(jobs_router, prefix="/jobs", tags=["jobs"])
     return application
 
 

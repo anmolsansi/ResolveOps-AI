@@ -18,6 +18,7 @@ from app.schemas.rag import (
     RagQueryResponse,
     RetrievedChunk,
 )
+from app.services.prompts import get_active_prompt_text
 from app.services.providers.factory import get_answer_provider, get_embedding_provider
 from app.services.quality import compute_quality_metrics
 from app.services.retrieval import compute_confidence, retrieve_chunks
@@ -59,7 +60,9 @@ def rag_query(req: RagQueryRequest, db: Session = Depends(get_db)) -> RagQueryRe
         contexts = [
             {"ticket_id": r["ticket_id"], "text": r["text"]} for r in results
         ]
-        answer = answer_provider.generate_answer(req.question, contexts)
+        answer = answer_provider.generate_answer(
+            req.question, contexts, system_prompt=get_active_prompt_text(db)
+        )
         citations = list(dict.fromkeys(r["ticket_id"] for r in results))
 
     quality = compute_quality_metrics(

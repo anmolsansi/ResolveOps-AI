@@ -1,3 +1,5 @@
+import os
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -13,19 +15,24 @@ from app.api.kb import router as kb_router
 from app.api.pii import router as pii_router
 from app.api.prompts import router as prompts_router
 from app.api.rag import router as rag_router
+from app.api.reliability import router as reliability_router
 from app.api.retention import router as retention_router
 from app.api.settings import router as settings_router
-from app.api.reliability import router as reliability_router
 from app.api.sla import router as sla_router
 from app.api.tickets import router as tickets_router
 from app.api.workspaces import router as workspaces_router
+
+
+def _cors_origins() -> list[str]:
+    configured_origins = os.getenv("CORS_ALLOW_ORIGINS", "http://localhost:5173")
+    return [origin.strip() for origin in configured_origins.split(",") if origin.strip()]
 
 
 def create_app() -> FastAPI:
     application = FastAPI(title="ResolveOps AI", version="0.1.0")
     application.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],
+        allow_origins=_cors_origins(),
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],

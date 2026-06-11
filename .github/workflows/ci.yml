@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main, complete-v2-portfolio-polish]
+    branches: [main, complete-v2-portfolio-polish, feature-reliability-metrics]
   pull_request:
     branches: [main]
 
@@ -14,20 +14,15 @@ jobs:
         working-directory: backend
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-
       - name: Install dependencies
         run: pip install -e ".[dev]"
-
       - name: Lint (ruff)
         run: python -m ruff check .
-
       - name: Typecheck (mypy)
         run: python -m mypy app --ignore-missing-imports
-
       - name: Tests (pytest)
         run: python -m pytest -v
 
@@ -38,20 +33,15 @@ jobs:
         working-directory: frontend
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-
       - name: Install dependencies
         run: npm ci
-
       - name: Lint
         run: npm run lint
-
       - name: Typecheck
         run: npm run typecheck
-
       - name: Build
         run: npm run build
 
@@ -59,29 +49,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - name: Build and start services
         run: docker compose up -d --build
-
       - name: Wait for backend readiness
-        run: |
-          for i in $(seq 1 30); do
-            if curl -sf http://localhost:8000/health; then
-              echo "Backend is ready"
-              exit 0
-            fi
-            echo "Waiting for backend... ($i/30)"
-            sleep 2
-          done
-          echo "Backend failed to start"
-          docker compose logs backend
-          exit 1
-
-      - name: Run V2 API smoke validation
-        run: |
-          python3 scripts/generate_sample_tickets.py --count 80
-          python3 scripts/v2_api_smoke.py --base-url http://localhost:8000 --csv scripts/sample_tickets.csv
-
+        run: python3 scripts/wait_for_api.py
+      - name: Generate sample data
+        run: python3 scripts/generate_sample_tickets.py --count 80
+      - name: Run V3 reliability smoke validation
+        run: python3 scripts/v3_api_smoke.py --base-url http://localhost:8000 --csv scripts/sample_tickets.csv
       - name: Teardown
         if: always()
         run: docker compose down -v

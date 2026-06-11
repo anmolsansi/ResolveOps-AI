@@ -15,6 +15,7 @@ from app.api.prompts import router as prompts_router
 from app.api.rag import router as rag_router
 from app.api.retention import router as retention_router
 from app.api.settings import router as settings_router
+from app.api.reliability import router as reliability_router
 from app.api.sla import router as sla_router
 from app.api.tickets import router as tickets_router
 from app.api.workspaces import router as workspaces_router
@@ -34,6 +35,7 @@ def create_app() -> FastAPI:
     application.include_router(rag_router, prefix="/rag", tags=["rag"])
     application.include_router(dashboard_router, prefix="/dashboard", tags=["dashboard"])
     application.include_router(eval_router, prefix="/eval", tags=["eval"])
+    application.include_router(reliability_router, prefix="/reliability", tags=["reliability"])
     application.include_router(connectors_router, prefix="/connectors", tags=["connectors"])
     application.include_router(assist_router, prefix="/assist", tags=["assist"])
     application.include_router(kb_router, prefix="/kb", tags=["kb"])

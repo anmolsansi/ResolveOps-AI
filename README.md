@@ -48,6 +48,27 @@ V3 scope: reliability platform — hallucination risk, citation coverage, retrie
 - [x] **CI**: V3 smoke validation script runs in CI (`scripts/v3_api_smoke.py`)
 - [x] **Docs**: V3 completion guide (`docs/V3_COMPLETION.md`)
 
+## V4 Workflow Integration Completion Checklist
+
+V4 scope: workflow integration — Zendesk/Freshdesk/Intercom import, scheduled ingestion, incremental sync, semantic dedupe, assist draft, KB generation, SLA risk.
+
+- [x] **Backend**: Connector abstraction with mock providers (Zendesk, Freshdesk, Intercom) and deterministic catalogs
+- [x] **Backend**: Incremental sync via cursor-based `fetch_since` (mock mode)
+- [x] **Backend**: Scheduled ingestion jobs with `run-due` trigger
+- [x] **Backend**: Semantic duplicate detection endpoint (`/connectors/duplicates`)
+- [x] **Backend**: Assist draft with answer/clarification/route-to-human logic and tier guidance
+- [x] **Backend**: Knowledge base generation from resolved tickets
+- [x] **Backend**: SLA risk detection for open tickets
+- [x] **Backend**: Tests for all V4 endpoints (`backend/tests/test_v4_workflow.py`)
+- [x] **Frontend**: Connectors page (create/list/sync/delete connectors, schedule jobs)
+- [x] **Frontend**: Assist page (draft replies with citations & tier guidance)
+- [x] **Frontend**: Knowledge Base page (generated articles from resolved tickets)
+- [x] **Frontend**: SLA Risk page (breach detection for open tickets)
+- [x] **CI**: V4 smoke validation script runs in CI (`scripts/v4_api_smoke.py`)
+- [x] **Docs**: V4 noted in README with demo scope clarification
+
+> **Note**: V4 uses **mock connectors** for portfolio/demo purposes. Real Zendesk/Freshdesk/Intercom API implementations require live `fetch_since` with API credentials, webhook-based sync, and a production-ready scheduler/worker. These are out of scope for the portfolio demo.
+
 ## Architecture Overview
 
 ```

@@ -69,6 +69,7 @@ def retrieve_chunks(
     question: str,
     filters: dict[str, str | None] | None = None,
     top_k: int = 5,
+    workspace_id=None,
 ) -> list[dict]:
     provider = get_embedding_provider()
     q_embedding = provider.embed_texts([question])[0]
@@ -76,6 +77,8 @@ def retrieve_chunks(
     query_tokens = _tokenize(question) if use_keyword_boost else set()
 
     filter_conditions = []
+    if workspace_id is not None:
+        filter_conditions.append(TicketChunk.ticket_id == Ticket.id)
     if filters:
         filter_map = {
             "product_area": Ticket.product_area,
@@ -90,6 +93,8 @@ def retrieve_chunks(
                 filter_conditions.append(col == val)
 
     query = db.query(TicketChunk).join(Ticket, TicketChunk.ticket_id == Ticket.id)
+    if workspace_id is not None:
+        query = query.filter(Ticket.workspace_id == workspace_id)
     if filter_conditions:
         query = query.filter(and_(*filter_conditions))
 

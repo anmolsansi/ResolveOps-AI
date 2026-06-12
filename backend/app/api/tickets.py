@@ -6,8 +6,10 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile
 from sqlalchemy.orm import Session
 
+from app.api.deps import get_current_user, get_current_workspace
+from app.core.config import settings
 from app.core.database import get_db
-from app.models.models import IngestionBatch, Ticket, TicketChunk
+from app.models.models import IngestionBatch, Ticket, TicketChunk, User, Workspace
 from app.schemas.tickets import (
     ChunkPreview,
     InvalidRow,
@@ -18,6 +20,7 @@ from app.schemas.tickets import (
     UploadResponse,
 )
 from app.services.chunking import build_ticket_text, chunk_text, estimate_tokens
+from app.services.pii import redact_pii
 from app.services.providers.factory import get_embedding_provider
 
 router = APIRouter()
@@ -43,7 +46,12 @@ def _parse_date(value: str) -> datetime | None:
 
 
 @router.post("/upload", response_model=UploadResponse)
-def upload_tickets(file: UploadFile, db: Session = Depends(get_db)) -> UploadResponse:
+def upload_tickets(
+    file: UploadFile,
+    workspace: Workspace = Depends(get_current_workspace),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> UploadResponse:
     if not file.filename or not file.filename.endswith(".csv"):
         raise HTTPException(status_code=400, detail="Only CSV files are accepted")
 
@@ -60,7 +68,7 @@ def upload_tickets(file: UploadFile, db: Session = Depends(get_db)) -> UploadRes
             detail=f"Missing required columns: {', '.join(missing_cols)}",
         )
 
-    batch = IngestionBatch(filename=file.filename or "upload.csv")
+    batch = IngestionBatch(filename=file.filename or "upload.csv", workspace_id=workspace.id)
     db.add(batch)
     db.flush()
 
@@ -72,9 +80,10 @@ def upload_tickets(file: UploadFile, db: Session = Depends(get_db)) -> UploadRes
     duplicate = 0
     embedding_failures = 0
     provider = get_embedding_provider()
+    pii_enabled = settings.pii_redaction_enabled
 
     existing_ids: set[str] = set()
-    db_existing = db.query(Ticket.id).all()
+    db_existing = db.query(Ticket.id).filter(Ticket.workspace_id == workspace.id).all()
     for (tid,) in db_existing:
         existing_ids.add(tid)
     batch_seen_ids: set[str] = set()
@@ -129,10 +138,18 @@ def upload_tickets(file: UploadFile, db: Session = Depends(get_db)) -> UploadRes
 
         batch_seen_ids.add(ticket_id)
 
+        title = row["title"].strip()
+        body = row["body"].strip()
+
+        if pii_enabled:
+            title, _ = redact_pii(title)
+            body, _ = redact_pii(body)
+
         ticket = Ticket(
             id=ticket_id,
-            title=row["title"].strip(),
-            body=row["body"].strip(),
+            workspace_id=workspace.id,
+            title=title,
+            body=body,
             product_area=row["product_area"].strip(),
             issue_type=row["issue_type"].strip(),
             priority=row["priority"].strip(),
@@ -200,9 +217,11 @@ def list_tickets(
     customer_tier: str | None = None,
     status: str | None = None,
     search: str | None = None,
+    workspace: Workspace = Depends(get_current_workspace),
+    user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> TicketListResponse:
-    query = db.query(Ticket)
+    query = db.query(Ticket).filter(Ticket.workspace_id == workspace.id)
 
     if product_area:
         query = query.filter(Ticket.product_area == product_area)
@@ -241,8 +260,15 @@ def list_tickets(
 
 
 @router.get("/{ticket_id}", response_model=TicketDetail)
-def get_ticket(ticket_id: str, db: Session = Depends(get_db)) -> TicketDetail:
-    ticket = db.query(Ticket).filter(Ticket.id == ticket_id).first()
+def get_ticket(
+    ticket_id: str,
+    workspace: Workspace = Depends(get_current_workspace),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> TicketDetail:
+    ticket = db.query(Ticket).filter(
+        Ticket.id == ticket_id, Ticket.workspace_id == workspace.id
+    ).first()
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
 

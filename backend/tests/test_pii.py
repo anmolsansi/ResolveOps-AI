@@ -30,10 +30,15 @@ def test_clean_text_has_no_matches():
     assert redacted == "The login button does not work on mobile."
 
 
-def test_scan_endpoint(client):
-    resp = client.post("/pii/scan", json={"text": "reach me: x@y.com"})
+def test_scan_endpoint(client, auth_headers):
+    resp = client.post("/pii/scan", json={"text": "reach me: x@y.com"}, headers=auth_headers)
     assert resp.status_code == 200
     data = resp.json()
     assert data["counts"].get("email") == 1
     assert "[REDACTED_EMAIL]" in data["redacted_text"]
     assert data["matches"][0]["type"] == "email"
+
+
+def test_pii_requires_auth(client):
+    resp = client.post("/pii/scan", json={"text": "test"})
+    assert resp.status_code == 401

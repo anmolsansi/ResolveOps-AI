@@ -16,10 +16,11 @@ def _make_csv(rows: list[dict]) -> io.BytesIO:
     return io.BytesIO("\n".join(lines).encode("utf-8"))
 
 
-def _upload(client, rows):
+def _upload(client, rows, headers=None):
     return client.post(
         "/tickets/upload",
         files={"file": ("tickets.csv", _make_csv(rows), "text/csv")},
+        headers=headers,
     )
 
 
@@ -102,9 +103,9 @@ def test_quality_metrics_grounded_answer():
 # --- RAG endpoint quality + feedback ---
 
 
-def test_rag_response_includes_quality(client):
-    _upload(client, BILLING_ROWS)
-    resp = client.post("/rag/query", json={"question": "billing charge invoice refund"})
+def test_rag_response_includes_quality(client, auth_headers):
+    _upload(client, BILLING_ROWS, auth_headers)
+    resp = client.post("/rag/query", json={"question": "billing charge invoice refund"}, headers=auth_headers)
     assert resp.status_code == 200
     data = resp.json()
     assert "query_id" in data
@@ -120,28 +121,29 @@ def test_rag_response_includes_quality(client):
         assert 0.0 <= q[key] <= 1.0
 
 
-def test_feedback_updates_query(client):
-    _upload(client, BILLING_ROWS)
-    resp = client.post("/rag/query", json={"question": "billing charge invoice refund"})
+def test_feedback_updates_query(client, auth_headers):
+    _upload(client, BILLING_ROWS, auth_headers)
+    resp = client.post("/rag/query", json={"question": "billing charge invoice refund"}, headers=auth_headers)
     query_id = resp.json()["query_id"]
 
-    fb = client.post(f"/rag/queries/{query_id}/feedback", json={"feedback": "wrong_citation"})
+    fb = client.post(f"/rag/queries/{query_id}/feedback", json={"feedback": "wrong_citation"}, headers=auth_headers)
     assert fb.status_code == 200
     assert fb.json()["feedback"] == "wrong_citation"
 
 
-def test_feedback_invalid_value_rejected(client):
-    _upload(client, BILLING_ROWS)
-    resp = client.post("/rag/query", json={"question": "billing charge invoice refund"})
+def test_feedback_invalid_value_rejected(client, auth_headers):
+    _upload(client, BILLING_ROWS, auth_headers)
+    resp = client.post("/rag/query", json={"question": "billing charge invoice refund"}, headers=auth_headers)
     query_id = resp.json()["query_id"]
-    bad = client.post(f"/rag/queries/{query_id}/feedback", json={"feedback": "amazing"})
+    bad = client.post(f"/rag/queries/{query_id}/feedback", json={"feedback": "amazing"}, headers=auth_headers)
     assert bad.status_code == 422
 
 
-def test_feedback_unknown_query_404(client):
+def test_feedback_unknown_query_404(client, auth_headers):
     resp = client.post(
         "/rag/queries/00000000-0000-0000-0000-000000000000/feedback",
         json={"feedback": "helpful"},
+        headers=auth_headers,
     )
     assert resp.status_code == 404
 
@@ -149,10 +151,10 @@ def test_feedback_unknown_query_404(client):
 # --- dashboard reliability endpoints ---
 
 
-def test_retrieval_metrics_has_percentiles_and_quality(client):
-    _upload(client, BILLING_ROWS)
-    client.post("/rag/query", json={"question": "billing charge invoice refund"})
-    resp = client.get("/dashboard/retrieval")
+def test_retrieval_metrics_has_percentiles_and_quality(client, auth_headers):
+    _upload(client, BILLING_ROWS, auth_headers)
+    client.post("/rag/query", json={"question": "billing charge invoice refund"}, headers=auth_headers)
+    resp = client.get("/dashboard/retrieval", headers=auth_headers)
     assert resp.status_code == 200
     data = resp.json()
     for key in [
@@ -163,10 +165,10 @@ def test_retrieval_metrics_has_percentiles_and_quality(client):
         assert key in data
 
 
-def test_cost_endpoint_groups_by_model(client):
-    _upload(client, BILLING_ROWS)
-    client.post("/rag/query", json={"question": "billing charge invoice refund"})
-    resp = client.get("/dashboard/cost")
+def test_cost_endpoint_groups_by_model(client, auth_headers):
+    _upload(client, BILLING_ROWS, auth_headers)
+    client.post("/rag/query", json={"question": "billing charge invoice refund"}, headers=auth_headers)
+    resp = client.get("/dashboard/cost", headers=auth_headers)
     assert resp.status_code == 200
     data = resp.json()
     assert data["total_queries"] >= 1
@@ -177,40 +179,39 @@ def test_cost_endpoint_groups_by_model(client):
     assert entry["query_count"] >= 1
 
 
-def test_quality_by_area_endpoint(client):
-    _upload(client, BILLING_ROWS)
-    client.post("/rag/query", json={"question": "billing charge invoice refund"})
-    resp = client.get("/dashboard/quality-by-area")
+def test_quality_by_area_endpoint(client, auth_headers):
+    _upload(client, BILLING_ROWS, auth_headers)
+    client.post("/rag/query", json={"question": "billing charge invoice refund"}, headers=auth_headers)
+    resp = client.get("/dashboard/quality-by-area", headers=auth_headers)
     assert resp.status_code == 200
     areas = resp.json()["areas"]
     assert any(a["product_area"] == "Billing" for a in areas)
 
 
-def test_failed_queries_queue(client):
-    _upload(client, BILLING_ROWS)
-    # off-topic -> low confidence -> failed
-    client.post("/rag/query", json={"question": "chocolate cake recipe"})
-    resp = client.get("/dashboard/failed-queries")
+def test_failed_queries_queue(client, auth_headers):
+    _upload(client, BILLING_ROWS, auth_headers)
+    client.post("/rag/query", json={"question": "chocolate cake recipe"}, headers=auth_headers)
+    resp = client.get("/dashboard/failed-queries", headers=auth_headers)
     assert resp.status_code == 200
     data = resp.json()
     assert data["count"] >= 1
     assert any(item["reason"] == "low_confidence" for item in data["items"])
 
 
-def test_failed_queries_includes_negative_feedback(client):
-    _upload(client, BILLING_ROWS)
-    resp = client.post("/rag/query", json={"question": "billing charge invoice refund"})
+def test_failed_queries_includes_negative_feedback(client, auth_headers):
+    _upload(client, BILLING_ROWS, auth_headers)
+    resp = client.post("/rag/query", json={"question": "billing charge invoice refund"}, headers=auth_headers)
     query_id = resp.json()["query_id"]
-    client.post(f"/rag/queries/{query_id}/feedback", json={"feedback": "not_helpful"})
-    failed = client.get("/dashboard/failed-queries").json()
+    client.post(f"/rag/queries/{query_id}/feedback", json={"feedback": "not_helpful"}, headers=auth_headers)
+    failed = client.get("/dashboard/failed-queries", headers=auth_headers).json()
     assert any(item["reason"] == "feedback:not_helpful" for item in failed["items"])
 
 
 # --- eval regression compare ---
 
 
-def test_eval_compare_returns_deltas(client):
-    _upload(client, BILLING_ROWS)
+def test_eval_compare_returns_deltas(client, auth_headers):
+    _upload(client, BILLING_ROWS, auth_headers)
     resp = client.post(
         "/eval/compare",
         json={
@@ -219,6 +220,7 @@ def test_eval_compare_returns_deltas(client):
             "config_a": {"label": "k1", "top_k": 1, "threshold": 0.3},
             "config_b": {"label": "k5", "top_k": 5, "threshold": 0.3},
         },
+        headers=auth_headers,
     )
     assert resp.status_code == 200
     data = resp.json()
@@ -230,9 +232,9 @@ def test_eval_compare_returns_deltas(client):
     assert "passed_delta" in data
 
 
-def test_eval_compare_does_not_pollute_query_log(client):
-    _upload(client, BILLING_ROWS)
-    before = client.get("/dashboard/retrieval").json()["total_queries"]
+def test_eval_compare_does_not_pollute_query_log(client, auth_headers):
+    _upload(client, BILLING_ROWS, auth_headers)
+    before = client.get("/dashboard/retrieval", headers=auth_headers).json()["total_queries"]
     client.post(
         "/eval/compare",
         json={
@@ -240,6 +242,16 @@ def test_eval_compare_does_not_pollute_query_log(client):
             "config_a": {"label": "a", "top_k": 3, "threshold": 0.3},
             "config_b": {"label": "b", "top_k": 5, "threshold": 0.5},
         },
+        headers=auth_headers,
     )
-    after = client.get("/dashboard/retrieval").json()["total_queries"]
+    after = client.get("/dashboard/retrieval", headers=auth_headers).json()["total_queries"]
     assert after == before
+
+
+def test_reliability_requires_auth(client):
+    resp = client.post("/rag/query", json={"question": "test"})
+    assert resp.status_code == 401
+    resp = client.get("/dashboard/retrieval")
+    assert resp.status_code == 401
+    resp = client.get("/dashboard/failed-queries")
+    assert resp.status_code == 401

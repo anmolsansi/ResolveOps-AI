@@ -4,9 +4,10 @@ from collections import defaultdict
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
+from app.api.deps import get_current_user, get_current_workspace
 from app.core.config import settings
 from app.core.database import get_db
-from app.models.models import IngestionBatch, RagQuery
+from app.models.models import IngestionBatch, RagQuery, User, Workspace
 from app.schemas.dashboard import (
     BatchSummary,
     ChartsResponse,
@@ -47,8 +48,14 @@ def _failure_reason(q: RagQuery) -> str | None:
 
 
 @router.get("/quality", response_model=QualityResponse)
-def quality_metrics(db: Session = Depends(get_db)) -> QualityResponse:
-    batches = db.query(IngestionBatch).order_by(IngestionBatch.started_at.desc()).all()
+def quality_metrics(
+    workspace: Workspace = Depends(get_current_workspace),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> QualityResponse:
+    batches = db.query(IngestionBatch).filter(
+        IngestionBatch.workspace_id == workspace.id
+    ).order_by(IngestionBatch.started_at.desc()).all()
 
     total_batches = len(batches)
     total_rows = sum(b.total_count for b in batches)
@@ -89,8 +96,14 @@ def quality_metrics(db: Session = Depends(get_db)) -> QualityResponse:
 
 
 @router.get("/retrieval", response_model=RetrievalResponse)
-def retrieval_metrics(db: Session = Depends(get_db)) -> RetrievalResponse:
-    queries = db.query(RagQuery).order_by(RagQuery.created_at.desc()).all()
+def retrieval_metrics(
+    workspace: Workspace = Depends(get_current_workspace),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> RetrievalResponse:
+    queries = db.query(RagQuery).filter(
+        RagQuery.workspace_id == workspace.id
+    ).order_by(RagQuery.created_at.desc()).all()
 
     total_queries = len(queries)
     if total_queries == 0:
@@ -157,9 +170,14 @@ def retrieval_metrics(db: Session = Depends(get_db)) -> RetrievalResponse:
 
 
 @router.get("/charts", response_model=ChartsResponse)
-def charts_data(db: Session = Depends(get_db)) -> ChartsResponse:
+def charts_data(
+    workspace: Workspace = Depends(get_current_workspace),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> ChartsResponse:
     batches = (
         db.query(IngestionBatch)
+        .filter(IngestionBatch.workspace_id == workspace.id)
         .order_by(IngestionBatch.started_at.asc())
         .limit(50)
         .all()
@@ -178,6 +196,7 @@ def charts_data(db: Session = Depends(get_db)) -> ChartsResponse:
 
     queries = (
         db.query(RagQuery)
+        .filter(RagQuery.workspace_id == workspace.id)
         .order_by(RagQuery.created_at.asc())
         .limit(200)
         .all()
@@ -201,8 +220,12 @@ def charts_data(db: Session = Depends(get_db)) -> ChartsResponse:
 
 
 @router.get("/cost", response_model=CostResponse)
-def cost_metrics(db: Session = Depends(get_db)) -> CostResponse:
-    queries = db.query(RagQuery).all()
+def cost_metrics(
+    workspace: Workspace = Depends(get_current_workspace),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> CostResponse:
+    queries = db.query(RagQuery).filter(RagQuery.workspace_id == workspace.id).all()
 
     grouped: dict[tuple[str, str], dict[str, float]] = defaultdict(
         lambda: {"count": 0.0, "cost": 0.0}
@@ -232,8 +255,14 @@ def cost_metrics(db: Session = Depends(get_db)) -> CostResponse:
 
 
 @router.get("/quality-by-area", response_model=QualityByAreaResponse)
-def quality_by_area(db: Session = Depends(get_db)) -> QualityByAreaResponse:
-    queries = db.query(RagQuery).filter(RagQuery.product_area.isnot(None)).all()
+def quality_by_area(
+    workspace: Workspace = Depends(get_current_workspace),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> QualityByAreaResponse:
+    queries = db.query(RagQuery).filter(
+        RagQuery.workspace_id == workspace.id, RagQuery.product_area.isnot(None)
+    ).all()
 
     grouped: dict[str, list[RagQuery]] = defaultdict(list)
     for q in queries:
@@ -270,8 +299,14 @@ def quality_by_area(db: Session = Depends(get_db)) -> QualityByAreaResponse:
 
 
 @router.get("/failed-queries", response_model=FailedQueriesResponse)
-def failed_queries(db: Session = Depends(get_db)) -> FailedQueriesResponse:
-    queries = db.query(RagQuery).order_by(RagQuery.created_at.desc()).all()
+def failed_queries(
+    workspace: Workspace = Depends(get_current_workspace),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> FailedQueriesResponse:
+    queries = db.query(RagQuery).filter(
+        RagQuery.workspace_id == workspace.id
+    ).order_by(RagQuery.created_at.desc()).all()
 
     items = []
     for q in queries:

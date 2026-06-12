@@ -8,9 +8,10 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
+from app.api.deps import get_current_user, get_current_workspace
 from app.core.config import settings
 from app.core.database import get_db
-from app.models.models import EvalRun, RagQuery, SavedEvalQuestion
+from app.models.models import EvalRun, RagQuery, SavedEvalQuestion, User, Workspace
 from app.schemas.eval import (
     ConfigResult,
     EvalCompareRequest,
@@ -53,10 +54,14 @@ def _evaluate_question(
     embedding_provider: EmbeddingProvider,
     answer_provider: AnswerProvider,
     persist: bool,
+    workspace_id: _uuid.UUID | None = None,
 ) -> dict:
     start = time.time()
     filters_dict: dict[str, str | None] = dict(eq.filters or {})
-    chunks = retrieve_chunks(db, eq.question, filters=filters_dict, top_k=top_k)
+    chunks = retrieve_chunks(
+        db, eq.question, filters=filters_dict, top_k=top_k,
+        workspace_id=workspace_id,
+    )
 
     scores = [c["score"] for c in chunks]
     confidence = compute_confidence(scores)
@@ -82,6 +87,7 @@ def _evaluate_question(
     if persist:
         db.add(
             RagQuery(
+                workspace_id=workspace_id,
                 question=eq.question,
                 filters_json=json.dumps(filters_dict) if filters_dict else None,
                 answer=answer,
@@ -113,7 +119,12 @@ def _evaluate_question(
 
 
 @router.post("/run", response_model=EvalRunResponse)
-def run_eval(req: EvalRunRequest, db: Session = Depends(get_db)) -> EvalRunResponse:
+def run_eval(
+    req: EvalRunRequest,
+    workspace: Workspace = Depends(get_current_workspace),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> EvalRunResponse:
     questions = req.questions or DEFAULT_EVAL_QUESTIONS
     name = req.name or "eval-run"
 
@@ -129,6 +140,7 @@ def run_eval(req: EvalRunRequest, db: Session = Depends(get_db)) -> EvalRunRespo
             embedding_provider=embedding_provider,
             answer_provider=answer_provider,
             persist=True,
+            workspace_id=workspace.id,
         )
         for eq in questions
     ]
@@ -143,6 +155,7 @@ def run_eval(req: EvalRunRequest, db: Session = Depends(get_db)) -> EvalRunRespo
     avg_lat = total_lat / total_q if total_q > 0 else 0.0
 
     eval_run = EvalRun(
+        workspace_id=workspace.id,
         name=name,
         total_questions=total_q,
         passed_count=passed,
@@ -174,6 +187,7 @@ def _run_config(
     config: EvalConfig,
     embedding_provider: EmbeddingProvider,
     answer_provider: AnswerProvider,
+    workspace_id: _uuid.UUID | None = None,
 ) -> tuple[ConfigResult, list[dict]]:
     results = [
         _evaluate_question(
@@ -184,6 +198,7 @@ def _run_config(
             embedding_provider=embedding_provider,
             answer_provider=answer_provider,
             persist=False,
+            workspace_id=workspace_id,
         )
         for eq in questions
     ]
@@ -205,15 +220,24 @@ def _run_config(
 
 
 @router.post("/compare", response_model=EvalCompareResponse)
-def compare_eval(req: EvalCompareRequest, db: Session = Depends(get_db)) -> EvalCompareResponse:
+def compare_eval(
+    req: EvalCompareRequest,
+    workspace: Workspace = Depends(get_current_workspace),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> EvalCompareResponse:
     questions = req.questions or DEFAULT_EVAL_QUESTIONS
     embedding_provider = get_embedding_provider()
     answer_provider = get_answer_provider()
 
-    summary_a, results_a = _run_config(db, questions, req.config_a, embedding_provider,
-                                       answer_provider)
-    summary_b, results_b = _run_config(db, questions, req.config_b, embedding_provider,
-                                       answer_provider)
+    summary_a, results_a = _run_config(
+        db, questions, req.config_a, embedding_provider, answer_provider,
+        workspace_id=workspace.id,
+    )
+    summary_b, results_b = _run_config(
+        db, questions, req.config_b, embedding_provider, answer_provider,
+        workspace_id=workspace.id,
+    )
 
     per_question = [
         QuestionDelta(
@@ -247,8 +271,14 @@ def compare_eval(req: EvalCompareRequest, db: Session = Depends(get_db)) -> Eval
 
 
 @router.get("/runs", response_model=list[EvalRunResponse])
-def list_eval_runs(db: Session = Depends(get_db)) -> list[EvalRunResponse]:
-    runs = db.query(EvalRun).order_by(EvalRun.created_at.desc()).limit(50).all()
+def list_eval_runs(
+    workspace: Workspace = Depends(get_current_workspace),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> list[EvalRunResponse]:
+    runs = db.query(EvalRun).filter(
+        EvalRun.workspace_id == workspace.id
+    ).order_by(EvalRun.created_at.desc()).limit(50).all()
     return [
         EvalRunResponse(
             id=r.id,
@@ -269,9 +299,13 @@ def list_eval_runs(db: Session = Depends(get_db)) -> list[EvalRunResponse]:
 def export_eval_run(
     run_id: _uuid.UUID,
     format: str = Query("json", pattern="^(json|csv)$"),
+    workspace: Workspace = Depends(get_current_workspace),
+    user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> Response:
-    run = db.query(EvalRun).filter(EvalRun.id == run_id).first()
+    run = db.query(EvalRun).filter(
+        EvalRun.id == run_id, EvalRun.workspace_id == workspace.id
+    ).first()
     if not run:
         raise HTTPException(status_code=404, detail="Eval run not found")
 
@@ -319,9 +353,14 @@ def export_eval_run(
 
 
 @router.get("/questions", response_model=list[SavedEvalQuestionResponse])
-def list_eval_questions(db: Session = Depends(get_db)) -> list[SavedEvalQuestionResponse]:
+def list_eval_questions(
+    workspace: Workspace = Depends(get_current_workspace),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> list[SavedEvalQuestionResponse]:
     questions = (
         db.query(SavedEvalQuestion)
+        .filter(SavedEvalQuestion.workspace_id == workspace.id)
         .order_by(SavedEvalQuestion.created_at.desc())
         .all()
     )
@@ -338,9 +377,13 @@ def list_eval_questions(db: Session = Depends(get_db)) -> list[SavedEvalQuestion
 
 @router.post("/questions", response_model=SavedEvalQuestionResponse, status_code=201)
 def create_eval_question(
-    req: SavedEvalQuestionCreate, db: Session = Depends(get_db)
+    req: SavedEvalQuestionCreate,
+    workspace: Workspace = Depends(get_current_workspace),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ) -> SavedEvalQuestionResponse:
     q = SavedEvalQuestion(
+        workspace_id=workspace.id,
         question=req.question,
         filters_json=json.dumps(req.filters) if req.filters else None,
     )
@@ -359,9 +402,14 @@ def create_eval_question(
 def update_eval_question(
     question_id: _uuid.UUID,
     req: SavedEvalQuestionUpdate,
+    workspace: Workspace = Depends(get_current_workspace),
+    user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> SavedEvalQuestionResponse:
-    q = db.query(SavedEvalQuestion).filter(SavedEvalQuestion.id == question_id).first()
+    q = db.query(SavedEvalQuestion).filter(
+        SavedEvalQuestion.id == question_id,
+        SavedEvalQuestion.workspace_id == workspace.id,
+    ).first()
     if not q:
         raise HTTPException(status_code=404, detail="Question not found")
     if req.question is not None:
@@ -380,9 +428,15 @@ def update_eval_question(
 
 @router.delete("/questions/{question_id}", status_code=204)
 def delete_eval_question(
-    question_id: _uuid.UUID, db: Session = Depends(get_db)
+    question_id: _uuid.UUID,
+    workspace: Workspace = Depends(get_current_workspace),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ) -> None:
-    q = db.query(SavedEvalQuestion).filter(SavedEvalQuestion.id == question_id).first()
+    q = db.query(SavedEvalQuestion).filter(
+        SavedEvalQuestion.id == question_id,
+        SavedEvalQuestion.workspace_id == workspace.id,
+    ).first()
     if not q:
         raise HTTPException(status_code=404, detail="Question not found")
     db.delete(q)

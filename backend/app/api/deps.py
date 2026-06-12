@@ -1,4 +1,4 @@
-"""Shared API dependencies: authentication and role-based access control."""
+"""Shared API dependencies: authentication, RBAC, and workspace scoping."""
 from __future__ import annotations
 
 import uuid
@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.security import decode_access_token
-from app.models.models import User
+from app.models.models import Membership, User, Workspace
 
 ROLE_RANK = {"viewer": 1, "member": 2, "admin": 3}
 
@@ -63,3 +63,56 @@ def require_role(minimum: str) -> Callable[..., User]:
 
 require_admin = require_role("admin")
 require_member = require_role("member")
+
+
+def get_current_workspace(
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> Workspace:
+    """Resolve the user's default workspace (first membership).
+
+    Returns the first workspace the user belongs to. If the user has no
+    memberships, creates a default workspace and membership automatically.
+    """
+    membership = (
+        db.query(Membership)
+        .filter(Membership.user_id == user.id)
+        .order_by(Membership.created_at.asc())
+        .first()
+    )
+    if membership:
+        ws = db.get(Workspace, membership.workspace_id)
+        if ws:
+            return ws
+
+    # Auto-create a default workspace for the user
+    import re as _re
+
+    slug = _re.sub(r"[^a-z0-9]+", "-", user.email.split("@")[0]).strip("-")
+    ws = Workspace(name=f"{user.email}'s Workspace", slug=slug)
+    db.add(ws)
+    db.flush()
+    mem = Membership(workspace_id=ws.id, user_id=user.id, role="admin")
+    db.add(mem)
+    db.commit()
+    db.refresh(ws)
+    return ws
+
+
+def require_workspace_admin(
+    workspace: Workspace = Depends(get_current_workspace),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> Workspace:
+    """Require the current user to be admin of their workspace."""
+    membership = (
+        db.query(Membership)
+        .filter(Membership.workspace_id == workspace.id, Membership.user_id == user.id)
+        .first()
+    )
+    if not membership or membership.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Requires workspace admin role",
+        )
+    return workspace

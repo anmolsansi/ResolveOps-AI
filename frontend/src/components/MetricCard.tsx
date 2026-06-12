@@ -4,11 +4,15 @@ interface MetricCardProps {
   label: string;
   value: string | number;
   accent?: string;
+  explanation?: string;
 }
 
-export default function MetricCard({ label, value, accent }: MetricCardProps) {
+export default function MetricCard({ label, value, accent, explanation }: MetricCardProps) {
   return (
-    <div style={{ ...card, minWidth: 140, textAlign: "center", flex: "1 1 140px" }}>
+    <div
+      style={{ ...card, minWidth: 140, textAlign: "center", flex: "1 1 140px" }}
+      title={explanation}
+    >
       <div style={{ fontSize: "1.6rem", fontWeight: 700, color: accent || colors.primary }}>
         {value}
       </div>

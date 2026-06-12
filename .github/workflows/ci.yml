@@ -74,7 +74,19 @@ jobs:
 
       - name: Run V3 reliability smoke validation
         run: python3 scripts/v3_api_smoke.py --base-url http://localhost:8000 --csv scripts/sample_tickets.csv      
-      
+
+      - name: Reset services before V4 smoke validation
+        run: |
+          docker compose down -v
+          docker compose up -d --build
+          python3 scripts/wait_for_api.py
+
+      - name: Generate sample data for V4
+        run: python3 scripts/generate_sample_tickets.py --count 80 --include-invalid
+
+      - name: Run V4 workflow smoke validation
+        run: python3 scripts/v4_api_smoke.py --base-url http://localhost:8000 --csv scripts/sample_tickets.csv
+       
       - name: Teardown
         if: always()
         run: docker compose down -v

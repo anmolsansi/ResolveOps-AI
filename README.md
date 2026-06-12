@@ -30,6 +30,24 @@ python3 scripts/generate_sample_tickets.py --count 80 --include-invalid
 python3 scripts/v1_api_smoke.py --base-url http://localhost:8000 --frontend-url http://localhost:5173 --csv scripts/sample_tickets.csv
 ```
 
+## V3 Reliability Completion Checklist
+
+V3 scope: reliability platform — hallucination risk, citation coverage, retrieval precision, answer completeness, cost tracking, latency p50/p95/p99, product-area quality, failed-query queue, feedback, regression eval.
+
+- [x] **Backend**: Quality scoring service with deterministic hallucination risk, citation coverage, retrieval precision, answer completeness
+- [x] **Backend**: Retrieval metrics endpoint with latency percentiles (p50/p95/p99) and quality averages
+- [x] **Backend**: Cost tracking by provider/model
+- [x] **Backend**: Product-area quality breakdown endpoint
+- [x] **Backend**: Failed-query review queue endpoint
+- [x] **Backend**: Feedback analytics endpoint
+- [x] **Backend**: Failed-query actions (mark reviewed/ignored, add to eval)
+- [x] **Backend**: Regression comparison endpoint (stored comparisons)
+- [x] **Backend**: Tests for reliability endpoints (`backend/tests/test_reliability.py`)
+- [x] **Frontend**: Reliability page displaying all metrics, failed-query queue, regression comparison UI
+- [x] **Frontend**: Quality metric explanations in UI tooltips
+- [x] **CI**: V3 smoke validation script runs in CI (`scripts/v3_api_smoke.py`)
+- [x] **Docs**: V3 completion guide (`docs/V3_COMPLETION.md`)
+
 ## Architecture Overview
 
 ```

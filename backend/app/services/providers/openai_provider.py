@@ -79,7 +79,7 @@ class OpenAIAnswerProvider(AnswerProvider):
             "in square brackets like [TICKET-123]. If the context doesn't "
             "contain enough information, say so clearly."
         )
-        messages = [
+        messages: list[dict[str, str]] = [
             {
                 "role": "system",
                 "content": system_content,
@@ -95,7 +95,7 @@ class OpenAIAnswerProvider(AnswerProvider):
 
         response = self._client.chat.completions.create(
             model=CHAT_MODEL,
-            messages=messages,
+            messages=messages,  # type: ignore[arg-type]
             temperature=0.2,
             max_tokens=512,
         )

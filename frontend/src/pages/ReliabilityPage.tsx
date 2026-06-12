@@ -30,6 +30,17 @@ function reasonColor(reason: string): string {
   return colors.textMuted;
 }
 
+const metricExplanations: Record<string, string> = {
+  "Hallucination Risk": "Share of answer tokens not supported by any retrieved context. Lower is better.",
+  "Citation Coverage": "Share of answer tokens supported by cited ticket contexts. Higher is better.",
+  "Retrieval Precision": "Share of retrieved chunks that overlap with the user question after tokenization. Higher is better.",
+  "Answer Completeness": "Share of the user question addressed by the answer tokens. Higher is better.",
+  "Citation Rate": "Percentage of queries that returned at least one citation. Higher is better.",
+  "p50": "Median latency — 50% of queries complete within this time.",
+  "p95": "95th percentile latency — 95% of queries complete within this time.",
+  "p99": "99th percentile latency — 99% of queries complete within this time.",
+};
+
 export default function ReliabilityPage() {
   const [retrieval, setRetrieval] = useState<RetrievalResponse | null>(null);
   const [cost, setCost] = useState<CostResponse | null>(null);
@@ -99,23 +110,32 @@ export default function ReliabilityPage() {
             label="Hallucination Risk"
             value={pct(retrieval.average_hallucination_risk)}
             accent={retrieval.average_hallucination_risk < 0.5 ? colors.success : colors.danger}
+            explanation={metricExplanations["Hallucination Risk"]}
           />
           <MetricCard
             label="Citation Coverage"
             value={pct(retrieval.average_citation_coverage)}
             accent={colors.success}
+            explanation={metricExplanations["Citation Coverage"]}
           />
           <MetricCard
             label="Retrieval Precision"
             value={pct(retrieval.average_retrieval_precision)}
             accent={colors.primary}
+            explanation={metricExplanations["Retrieval Precision"]}
           />
           <MetricCard
             label="Answer Completeness"
             value={pct(retrieval.average_answer_completeness)}
             accent={colors.primary}
+            explanation={metricExplanations["Answer Completeness"]}
           />
-          <MetricCard label="Citation Rate" value={pct(retrieval.citation_rate)} accent={colors.success} />
+          <MetricCard
+            label="Citation Rate"
+            value={pct(retrieval.citation_rate)}
+            accent={colors.success}
+            explanation={metricExplanations["Citation Rate"]}
+          />
         </div>
       )}
 
@@ -123,9 +143,24 @@ export default function ReliabilityPage() {
       {retrieval && (
         <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", marginBottom: "1.5rem" }}>
           <MetricCard label="Avg" value={`${retrieval.average_latency_ms.toFixed(0)}ms`} />
-          <MetricCard label="p50" value={`${retrieval.latency_p50_ms.toFixed(0)}ms`} accent={colors.success} />
-          <MetricCard label="p95" value={`${retrieval.latency_p95_ms.toFixed(0)}ms`} accent={colors.warning} />
-          <MetricCard label="p99" value={`${retrieval.latency_p99_ms.toFixed(0)}ms`} accent={colors.danger} />
+          <MetricCard
+            label="p50"
+            value={`${retrieval.latency_p50_ms.toFixed(0)}ms`}
+            accent={colors.success}
+            explanation={metricExplanations["p50"]}
+          />
+          <MetricCard
+            label="p95"
+            value={`${retrieval.latency_p95_ms.toFixed(0)}ms`}
+            accent={colors.warning}
+            explanation={metricExplanations["p95"]}
+          />
+          <MetricCard
+            label="p99"
+            value={`${retrieval.latency_p99_ms.toFixed(0)}ms`}
+            accent={colors.danger}
+            explanation={metricExplanations["p99"]}
+          />
           <MetricCard label="Total Queries" value={retrieval.total_queries} />
         </div>
       )}

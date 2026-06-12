@@ -20,13 +20,14 @@ from app.services.providers.factory import get_embedding_provider
 JOB_TYPES = ("embedding_backfill", "connector_sync", "retention_run", "pii_redact_tickets")
 
 
-def enqueue_job(db: Session, job_type: str, payload: dict | None = None) -> BackgroundJob:
+def enqueue_job(db: Session, job_type: str, payload: dict | None = None, workspace_id=None) -> BackgroundJob:
     if job_type not in JOB_TYPES:
         raise ValueError(f"Unknown job_type: {job_type}")
     job = BackgroundJob(
         job_type=job_type,
         status="pending",
         payload_json=json.dumps(payload) if payload else None,
+        workspace_id=workspace_id,
     )
     db.add(job)
     db.commit()

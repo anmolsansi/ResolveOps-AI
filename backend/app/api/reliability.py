@@ -6,9 +6,10 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
+from app.api.deps import get_current_user, get_current_workspace
 from app.api.eval import DEFAULT_EVAL_QUESTIONS, _run_config
 from app.core.database import get_db
-from app.models.models import EvalRun, RagQuery, SavedEvalQuestion
+from app.models.models import EvalRun, RagQuery, SavedEvalQuestion, User, Workspace
 from app.schemas.eval import EvalCompareRequest, EvalCompareResponse, QuestionDelta
 from app.services.providers.factory import get_answer_provider, get_embedding_provider
 
@@ -68,9 +69,13 @@ def _safe_rate(num: int, denom: int) -> float:
 def review_failed_query(
     query_id: UUID,
     req: FailedQueryReviewRequest,
+    workspace: Workspace = Depends(get_current_workspace),
+    user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> FailedQueryActionResponse:
-    row = db.query(RagQuery).filter(RagQuery.id == query_id).first()
+    row = db.query(RagQuery).filter(
+        RagQuery.id == query_id, RagQuery.workspace_id == workspace.id
+    ).first()
     if not row:
         raise HTTPException(status_code=404, detail="Query not found")
     row.feedback = req.action
@@ -86,12 +91,20 @@ def review_failed_query(
 @router.post("/failed-queries/{query_id}/add-to-eval", response_model=FailedQueryActionResponse)
 def add_failed_query_to_eval(
     query_id: UUID,
+    workspace: Workspace = Depends(get_current_workspace),
+    user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> FailedQueryActionResponse:
-    row = db.query(RagQuery).filter(RagQuery.id == query_id).first()
+    row = db.query(RagQuery).filter(
+        RagQuery.id == query_id, RagQuery.workspace_id == workspace.id
+    ).first()
     if not row:
         raise HTTPException(status_code=404, detail="Query not found")
-    saved = SavedEvalQuestion(question=row.question, filters_json=row.filters_json)
+    saved = SavedEvalQuestion(
+        workspace_id=workspace.id,
+        question=row.question,
+        filters_json=row.filters_json,
+    )
     row.feedback = "reviewed"
     db.add(saved)
     db.commit()
@@ -105,8 +118,14 @@ def add_failed_query_to_eval(
 
 
 @router.get("/feedback", response_model=FeedbackAnalyticsResponse)
-def feedback_analytics(db: Session = Depends(get_db)) -> FeedbackAnalyticsResponse:
-    rows = db.query(RagQuery).filter(RagQuery.feedback.isnot(None)).all()
+def feedback_analytics(
+    workspace: Workspace = Depends(get_current_workspace),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> FeedbackAnalyticsResponse:
+    rows = db.query(RagQuery).filter(
+        RagQuery.workspace_id == workspace.id, RagQuery.feedback.isnot(None)
+    ).all()
     total = len(rows)
     helpful = sum(1 for row in rows if row.feedback == "helpful")
     not_helpful = sum(1 for row in rows if row.feedback == "not_helpful")
@@ -152,16 +171,20 @@ def feedback_analytics(db: Session = Depends(get_db)) -> FeedbackAnalyticsRespon
 @router.post("/compare", response_model=EvalCompareResponse)
 def run_and_store_comparison(
     req: EvalCompareRequest,
+    workspace: Workspace = Depends(get_current_workspace),
+    user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> EvalCompareResponse:
     questions = req.questions or DEFAULT_EVAL_QUESTIONS
     embedding_provider = get_embedding_provider()
     answer_provider = get_answer_provider()
     summary_a, results_a = _run_config(
-        db, questions, req.config_a, embedding_provider, answer_provider
+        db, questions, req.config_a, embedding_provider, answer_provider,
+        workspace_id=workspace.id,
     )
     summary_b, results_b = _run_config(
-        db, questions, req.config_b, embedding_provider, answer_provider
+        db, questions, req.config_b, embedding_provider, answer_provider,
+        workspace_id=workspace.id,
     )
 
     per_question = [
@@ -201,6 +224,7 @@ def run_and_store_comparison(
     }
     db.add(
         EvalRun(
+            workspace_id=workspace.id,
             name=f"compare:{response.name}",
             total_questions=response.total_questions,
             passed_count=response.config_b.passed_count,
@@ -215,10 +239,17 @@ def run_and_store_comparison(
 
 
 @router.get("/comparisons", response_model=list[StoredComparisonSummary])
-def list_stored_comparisons(db: Session = Depends(get_db)) -> list[StoredComparisonSummary]:
+def list_stored_comparisons(
+    workspace: Workspace = Depends(get_current_workspace),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> list[StoredComparisonSummary]:
     rows = (
         db.query(EvalRun)
-        .filter(EvalRun.name.startswith("compare:"))
+        .filter(
+            EvalRun.workspace_id == workspace.id,
+            EvalRun.name.startswith("compare:"),
+        )
         .order_by(EvalRun.created_at.desc())
         .limit(25)
         .all()

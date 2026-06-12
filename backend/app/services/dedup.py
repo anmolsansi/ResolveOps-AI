@@ -13,11 +13,18 @@ from app.services.retrieval import _parse_embedding, cosine_similarity
 DEFAULT_DEDUP_THRESHOLD = 0.92
 
 
-def _representative_embeddings(db: Session) -> dict[str, list[float]]:
+def _representative_embeddings(db: Session, workspace_id=None) -> dict[str, list[float]]:
     """First embedded chunk per ticket, used as the ticket's representative vector."""
-    rows = (
+    query = (
         db.query(TicketChunk)
         .filter(TicketChunk.embedding.isnot(None))
+    )
+    if workspace_id is not None:
+        query = query.join(Ticket, TicketChunk.ticket_id == Ticket.id).filter(
+            Ticket.workspace_id == workspace_id
+        )
+    rows = (
+        query
         .order_by(TicketChunk.ticket_id, TicketChunk.chunk_index)
         .all()
     )
@@ -49,10 +56,10 @@ def find_semantic_duplicate(
 
 
 def find_duplicate_clusters(
-    db: Session, threshold: float = DEFAULT_DEDUP_THRESHOLD
+    db: Session, threshold: float = DEFAULT_DEDUP_THRESHOLD, workspace_id=None
 ) -> list[dict]:
     """Group tickets whose representative embeddings are mutually similar."""
-    reps = _representative_embeddings(db)
+    reps = _representative_embeddings(db, workspace_id=workspace_id)
     ticket_ids = sorted(reps.keys())
     parent: dict[str, str] = {tid: tid for tid in ticket_ids}
 

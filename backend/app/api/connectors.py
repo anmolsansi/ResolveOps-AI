@@ -4,8 +4,9 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
+from app.api.deps import get_current_user, get_current_workspace
 from app.core.database import get_db
-from app.models.models import Connector, IngestionJob
+from app.models.models import Connector, IngestionJob, User, Workspace
 from app.schemas.connectors import (
     ConnectorCreate,
     ConnectorListResponse,
@@ -53,14 +54,22 @@ def _job_summary(j: IngestionJob) -> JobSummary:
 
 
 @router.post("", response_model=ConnectorSummary)
-def create_connector(req: ConnectorCreate, db: Session = Depends(get_db)) -> ConnectorSummary:
+def create_connector(
+    req: ConnectorCreate,
+    workspace: Workspace = Depends(get_current_workspace),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> ConnectorSummary:
     provider = req.provider.lower().strip()
     if provider not in SUPPORTED_PROVIDERS:
         raise HTTPException(
             status_code=400,
             detail=f"Unsupported provider. Supported: {', '.join(SUPPORTED_PROVIDERS)}",
         )
-    connector = Connector(provider=provider, name=req.name.strip() or provider)
+    connector = Connector(
+        provider=provider, name=req.name.strip() or provider,
+        workspace_id=workspace.id,
+    )
     db.add(connector)
     db.commit()
     db.refresh(connector)
@@ -68,14 +77,27 @@ def create_connector(req: ConnectorCreate, db: Session = Depends(get_db)) -> Con
 
 
 @router.get("", response_model=ConnectorListResponse)
-def list_connectors(db: Session = Depends(get_db)) -> ConnectorListResponse:
-    rows = db.query(Connector).order_by(Connector.created_at.desc()).all()
+def list_connectors(
+    workspace: Workspace = Depends(get_current_workspace),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> ConnectorListResponse:
+    rows = db.query(Connector).filter(
+        Connector.workspace_id == workspace.id
+    ).order_by(Connector.created_at.desc()).all()
     return ConnectorListResponse(items=[_connector_summary(c) for c in rows])
 
 
 @router.delete("/{connector_id}")
-def delete_connector(connector_id: UUID, db: Session = Depends(get_db)) -> dict:
-    connector = db.query(Connector).filter(Connector.id == connector_id).first()
+def delete_connector(
+    connector_id: UUID,
+    workspace: Workspace = Depends(get_current_workspace),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> dict:
+    connector = db.query(Connector).filter(
+        Connector.id == connector_id, Connector.workspace_id == workspace.id
+    ).first()
     if not connector:
         raise HTTPException(status_code=404, detail="Connector not found")
     db.query(IngestionJob).filter(IngestionJob.connector_id == connector_id).delete()
@@ -88,20 +110,30 @@ def delete_connector(connector_id: UUID, db: Session = Depends(get_db)) -> dict:
 def sync_connector(
     connector_id: UUID,
     limit: int = Query(6, ge=1, le=100),
+    workspace: Workspace = Depends(get_current_workspace),
+    user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> SyncResult:
-    connector = db.query(Connector).filter(Connector.id == connector_id).first()
+    connector = db.query(Connector).filter(
+        Connector.id == connector_id, Connector.workspace_id == workspace.id
+    ).first()
     if not connector:
         raise HTTPException(status_code=404, detail="Connector not found")
-    result = run_connector_sync(db, connector, limit=limit)
+    result = run_connector_sync(db, connector, limit=limit, workspace_id=workspace.id)
     return SyncResult(**result)
 
 
 @router.post("/{connector_id}/jobs", response_model=JobSummary)
 def create_job(
-    connector_id: UUID, req: JobCreate, db: Session = Depends(get_db)
+    connector_id: UUID,
+    req: JobCreate,
+    workspace: Workspace = Depends(get_current_workspace),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ) -> JobSummary:
-    connector = db.query(Connector).filter(Connector.id == connector_id).first()
+    connector = db.query(Connector).filter(
+        Connector.id == connector_id, Connector.workspace_id == workspace.id
+    ).first()
     if not connector:
         raise HTTPException(status_code=404, detail="Connector not found")
     job = IngestionJob(
@@ -116,19 +148,40 @@ def create_job(
 
 
 @router.get("/jobs", response_model=JobListResponse)
-def list_jobs(db: Session = Depends(get_db)) -> JobListResponse:
-    rows = db.query(IngestionJob).order_by(IngestionJob.created_at.desc()).all()
+def list_jobs(
+    workspace: Workspace = Depends(get_current_workspace),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> JobListResponse:
+    connector_ids = [c.id for c in db.query(Connector.id).filter(
+        Connector.workspace_id == workspace.id
+    ).all()]
+    rows = db.query(IngestionJob).filter(
+        IngestionJob.connector_id.in_(connector_ids)
+    ).order_by(IngestionJob.created_at.desc()).all() if connector_ids else []
     return JobListResponse(items=[_job_summary(j) for j in rows])
 
 
 @router.post("/jobs/run-due", response_model=RunDueResponse)
 def run_due_jobs(
-    limit: int = Query(6, ge=1, le=100), db: Session = Depends(get_db)
+    limit: int = Query(6, ge=1, le=100),
+    workspace: Workspace = Depends(get_current_workspace),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ) -> RunDueResponse:
     now = datetime.now(tz=None)
+    connector_ids = [c.id for c in db.query(Connector.id).filter(
+        Connector.workspace_id == workspace.id
+    ).all()]
+    if not connector_ids:
+        return RunDueResponse(ran=0, results=[])
     jobs = (
         db.query(IngestionJob)
-        .filter(IngestionJob.enabled.is_(True), IngestionJob.next_run_at <= now)
+        .filter(
+            IngestionJob.enabled.is_(True),
+            IngestionJob.next_run_at <= now,
+            IngestionJob.connector_id.in_(connector_ids),
+        )
         .all()
     )
     results: list[SyncResult] = []
@@ -136,7 +189,7 @@ def run_due_jobs(
         connector = db.query(Connector).filter(Connector.id == job.connector_id).first()
         if not connector or not connector.enabled:
             continue
-        result = run_connector_sync(db, connector, limit=limit)
+        result = run_connector_sync(db, connector, limit=limit, workspace_id=workspace.id)
         job.last_run_at = now
         job.next_run_at = now + timedelta(minutes=job.interval_minutes)
         job.last_status = "success"
@@ -149,9 +202,11 @@ def run_due_jobs(
 @router.get("/duplicates", response_model=DuplicatesResponse)
 def list_duplicates(
     threshold: float = Query(DEFAULT_DEDUP_THRESHOLD, ge=0.0, le=1.0),
+    workspace: Workspace = Depends(get_current_workspace),
+    user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> DuplicatesResponse:
-    clusters = find_duplicate_clusters(db, threshold=threshold)
+    clusters = find_duplicate_clusters(db, threshold=threshold, workspace_id=workspace.id)
     return DuplicatesResponse(
         clusters=[DuplicateCluster(**c) for c in clusters]
     )

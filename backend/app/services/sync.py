@@ -8,16 +8,16 @@ from app.services.connectors.factory import get_source_connector
 from app.services.ingestion import ingest_normalized_tickets
 
 
-def run_connector_sync(db: Session, connector: Connector, limit: int = 6) -> dict:
+def run_connector_sync(db: Session, connector: Connector, limit: int = 6, workspace_id=None) -> dict:
     source = get_source_connector(connector.provider)
     raw_tickets, new_cursor = source.fetch_since(connector.cursor, limit=limit)
     rows = [source.normalize(rt) for rt in raw_tickets]
 
-    batch = IngestionBatch(filename=f"{connector.provider} sync ({connector.name})")
+    batch = IngestionBatch(filename=f"{connector.provider} sync ({connector.name})", workspace_id=workspace_id)
     db.add(batch)
     db.flush()
 
-    result = ingest_normalized_tickets(db, rows, ingestion_batch_id=batch.id)
+    result = ingest_normalized_tickets(db, rows, ingestion_batch_id=batch.id, workspace_id=workspace_id)
 
     batch.total_count = len(rows)
     batch.valid_count = result.imported

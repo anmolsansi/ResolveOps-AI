@@ -48,6 +48,7 @@ def ingest_normalized_tickets(
     semantic_dedup: bool = True,
     semantic_threshold: float = DEFAULT_DEDUP_THRESHOLD,
     provider: EmbeddingProvider | None = None,
+    workspace_id=None,
 ) -> IngestResult:
     """Ingest already-validated, normalized ticket dicts.
 
@@ -68,6 +69,7 @@ def ingest_normalized_tickets(
 
         ticket = Ticket(
             id=tid,
+            workspace_id=workspace_id,
             title=row["title"],
             body=row["body"],
             product_area=row["product_area"],

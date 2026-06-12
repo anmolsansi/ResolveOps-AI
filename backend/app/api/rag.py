@@ -6,9 +6,10 @@ from collections import Counter
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from app.api.deps import get_current_user, get_current_workspace
 from app.core.config import settings
 from app.core.database import get_db
-from app.models.models import RagQuery
+from app.models.models import RagQuery, User, Workspace
 from app.schemas.rag import (
     ChunkDebugInfo,
     FeedbackRequest,
@@ -34,14 +35,22 @@ def _dominant_product_area(results: list[dict]) -> str | None:
 
 
 @router.post("/query", response_model=RagQueryResponse)
-def rag_query(req: RagQueryRequest, db: Session = Depends(get_db)) -> RagQueryResponse:
+def rag_query(
+    req: RagQueryRequest,
+    workspace: Workspace = Depends(get_current_workspace),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> RagQueryResponse:
     start = time.time()
 
     filters_dict: dict[str, str | None] | None = None
     if req.filters:
         filters_dict = req.filters.model_dump(exclude_none=True)
 
-    results = retrieve_chunks(db, req.question, filters=filters_dict, top_k=req.top_k)
+    results = retrieve_chunks(
+        db, req.question, filters=filters_dict, top_k=req.top_k,
+        workspace_id=workspace.id,
+    )
 
     scores = [r["score"] for r in results]
     confidence = compute_confidence(scores)
@@ -76,6 +85,7 @@ def rag_query(req: RagQueryRequest, db: Session = Depends(get_db)) -> RagQueryRe
     )
 
     rag_row = RagQuery(
+        workspace_id=workspace.id,
         question=req.question,
         filters_json=json.dumps(filters_dict) if filters_dict else None,
         answer=answer,
@@ -128,9 +138,13 @@ def rag_query(req: RagQueryRequest, db: Session = Depends(get_db)) -> RagQueryRe
 def submit_feedback(
     query_id: _uuid.UUID,
     req: FeedbackRequest,
+    workspace: Workspace = Depends(get_current_workspace),
+    user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> FeedbackResponse:
-    row = db.query(RagQuery).filter(RagQuery.id == query_id).first()
+    row = db.query(RagQuery).filter(
+        RagQuery.id == query_id, RagQuery.workspace_id == workspace.id
+    ).first()
     if not row:
         raise HTTPException(status_code=404, detail="Query not found")
     row.feedback = req.feedback.value

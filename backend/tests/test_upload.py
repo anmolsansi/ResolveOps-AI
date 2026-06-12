@@ -32,11 +32,12 @@ VALID_ROW = {
 }
 
 
-def test_upload_valid_csv(client):
+def test_upload_valid_csv(client, auth_headers):
     csv_file = _make_csv([VALID_ROW])
     resp = client.post(
         "/tickets/upload",
         files={"file": ("tickets.csv", csv_file, "text/csv")},
+        headers=auth_headers,
     )
     assert resp.status_code == 200
     data = resp.json()
@@ -45,12 +46,13 @@ def test_upload_valid_csv(client):
     assert data["duplicate_count"] == 0
 
 
-def test_upload_missing_field(client):
+def test_upload_missing_field(client, auth_headers):
     row = {**VALID_ROW, "title": ""}
     csv_file = _make_csv([row])
     resp = client.post(
         "/tickets/upload",
         files={"file": ("tickets.csv", csv_file, "text/csv")},
+        headers=auth_headers,
     )
     assert resp.status_code == 200
     data = resp.json()
@@ -58,23 +60,25 @@ def test_upload_missing_field(client):
     assert len(data["errors"]) == 1
 
 
-def test_upload_invalid_date(client):
+def test_upload_invalid_date(client, auth_headers):
     row = {**VALID_ROW, "id": "T-BAD", "created_at": "not-a-date"}
     csv_file = _make_csv([row])
     resp = client.post(
         "/tickets/upload",
         files={"file": ("tickets.csv", csv_file, "text/csv")},
+        headers=auth_headers,
     )
     assert resp.status_code == 200
     data = resp.json()
     assert data["invalid_count"] == 1
 
 
-def test_upload_duplicate(client):
+def test_upload_duplicate(client, auth_headers):
     csv_file = _make_csv([VALID_ROW, VALID_ROW])
     resp = client.post(
         "/tickets/upload",
         files={"file": ("tickets.csv", csv_file, "text/csv")},
+        headers=auth_headers,
     )
     assert resp.status_code == 200
     data = resp.json()
@@ -82,39 +86,43 @@ def test_upload_duplicate(client):
     assert data["duplicate_count"] == 1
 
 
-def test_upload_rejects_non_csv(client):
+def test_upload_rejects_non_csv(client, auth_headers):
     resp = client.post(
         "/tickets/upload",
         files={"file": ("data.txt", io.BytesIO(b"hello"), "text/plain")},
+        headers=auth_headers,
     )
     assert resp.status_code == 400
     assert "CSV" in resp.json()["detail"]
 
 
-def test_upload_missing_columns(client):
+def test_upload_missing_columns(client, auth_headers):
     content = b"id,title\nT-1,Test\n"
     resp = client.post(
         "/tickets/upload",
         files={"file": ("tickets.csv", io.BytesIO(content), "text/csv")},
+        headers=auth_headers,
     )
     assert resp.status_code == 400
     assert "Missing required columns" in resp.json()["detail"]
 
 
-def test_upload_empty_csv(client):
+def test_upload_empty_csv(client, auth_headers):
     resp = client.post(
         "/tickets/upload",
         files={"file": ("tickets.csv", io.BytesIO(b""), "text/csv")},
+        headers=auth_headers,
     )
     assert resp.status_code == 400
 
 
-def test_upload_multiple_invalid_fields(client):
+def test_upload_multiple_invalid_fields(client, auth_headers):
     row = {**VALID_ROW, "id": "T-MULTI", "title": "", "body": "", "product_area": ""}
     csv_file = _make_csv([row])
     resp = client.post(
         "/tickets/upload",
         files={"file": ("tickets.csv", csv_file, "text/csv")},
+        headers=auth_headers,
     )
     assert resp.status_code == 200
     data = resp.json()
@@ -124,19 +132,20 @@ def test_upload_multiple_invalid_fields(client):
     assert "body" in error_reason
 
 
-def test_upload_creates_chunks(client):
+def test_upload_creates_chunks(client, auth_headers):
     csv_file = _make_csv([VALID_ROW])
     resp = client.post(
         "/tickets/upload",
         files={"file": ("tickets.csv", csv_file, "text/csv")},
+        headers=auth_headers,
     )
     assert resp.status_code == 200
-    detail = client.get("/tickets/T-1")
+    detail = client.get("/tickets/T-1", headers=auth_headers)
     assert detail.status_code == 200
     assert len(detail.json()["chunks"]) >= 1
 
 
-def test_upload_batch_counts(client):
+def test_upload_batch_counts(client, auth_headers):
     rows = [
         VALID_ROW,
         {**VALID_ROW, "id": "T-2", "title": "Another valid"},
@@ -146,6 +155,7 @@ def test_upload_batch_counts(client):
     resp = client.post(
         "/tickets/upload",
         files={"file": ("tickets.csv", csv_file, "text/csv")},
+        headers=auth_headers,
     )
     assert resp.status_code == 200
     data = resp.json()
@@ -154,24 +164,25 @@ def test_upload_batch_counts(client):
     assert data["invalid_count"] == 1
 
 
-def test_upload_cross_batch_duplicate(client):
+def test_upload_cross_batch_duplicate(client, auth_headers):
     csv1 = _make_csv([VALID_ROW])
-    client.post("/tickets/upload", files={"file": ("batch1.csv", csv1, "text/csv")})
+    client.post("/tickets/upload", files={"file": ("batch1.csv", csv1, "text/csv")}, headers=auth_headers)
 
     csv2 = _make_csv([VALID_ROW])
-    resp = client.post("/tickets/upload", files={"file": ("batch2.csv", csv2, "text/csv")})
+    resp = client.post("/tickets/upload", files={"file": ("batch2.csv", csv2, "text/csv")}, headers=auth_headers)
     assert resp.status_code == 200
     data = resp.json()
     assert data["duplicate_count"] == 1
     assert data["valid_count"] == 0
 
 
-def test_upload_empty_resolution_accepted(client):
+def test_upload_empty_resolution_accepted(client, auth_headers):
     row = {**VALID_ROW, "id": "T-NORES", "resolution": ""}
     csv_file = _make_csv([row])
     resp = client.post(
         "/tickets/upload",
         files={"file": ("tickets.csv", csv_file, "text/csv")},
+        headers=auth_headers,
     )
     assert resp.status_code == 200
     data = resp.json()
@@ -179,7 +190,7 @@ def test_upload_empty_resolution_accepted(client):
     assert data["invalid_count"] == 0
 
 
-def test_upload_various_date_formats(client):
+def test_upload_various_date_formats(client, auth_headers):
     row1 = {**VALID_ROW, "id": "T-D1", "created_at": "2025-01-15 10:30:00"}
     row2 = {**VALID_ROW, "id": "T-D2", "created_at": "2025-01-15T10:30:00"}
     row3 = {**VALID_ROW, "id": "T-D3", "created_at": "01/15/2025"}
@@ -187,8 +198,18 @@ def test_upload_various_date_formats(client):
     resp = client.post(
         "/tickets/upload",
         files={"file": ("tickets.csv", csv_file, "text/csv")},
+        headers=auth_headers,
     )
     assert resp.status_code == 200
     data = resp.json()
     assert data["valid_count"] == 3
     assert data["invalid_count"] == 0
+
+
+def test_upload_requires_auth(client):
+    csv_file = _make_csv([VALID_ROW])
+    resp = client.post(
+        "/tickets/upload",
+        files={"file": ("tickets.csv", csv_file, "text/csv")},
+    )
+    assert resp.status_code == 401

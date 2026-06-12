@@ -3,9 +3,9 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user, require_member
+from app.api.deps import get_current_user, get_current_workspace, require_member
 from app.core.database import get_db
-from app.models.models import BackgroundJob, User
+from app.models.models import BackgroundJob, User, Workspace
 from app.schemas.jobs import (
     JobCreate,
     JobListResponse,
@@ -36,12 +36,13 @@ def _to_response(j: BackgroundJob) -> JobResponse:
 @router.post("", response_model=JobResponse)
 def create_job(
     payload: JobCreate,
+    workspace: Workspace = Depends(get_current_workspace),
     user: User = Depends(require_member),
     db: Session = Depends(get_db),
 ) -> JobResponse:
     if payload.job_type not in JOB_TYPES:
         raise HTTPException(status_code=422, detail=f"job_type must be one of {list(JOB_TYPES)}")
-    job = enqueue_job(db, payload.job_type, payload.payload)
+    job = enqueue_job(db, payload.job_type, payload.payload, workspace_id=workspace.id)
     record_audit(
         db,
         actor_email=user.email,
@@ -57,10 +58,11 @@ def create_job(
 def list_jobs(
     status_filter: str | None = Query(default=None, alias="status"),
     limit: int = Query(default=50, le=200),
+    workspace: Workspace = Depends(get_current_workspace),
     _: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> JobListResponse:
-    query = db.query(BackgroundJob)
+    query = db.query(BackgroundJob).filter(BackgroundJob.workspace_id == workspace.id)
     if status_filter:
         query = query.filter(BackgroundJob.status == status_filter)
     jobs = query.order_by(BackgroundJob.created_at.desc()).limit(limit).all()
@@ -70,6 +72,7 @@ def list_jobs(
 @router.post("/process-pending", response_model=JobProcessResponse)
 def process_pending(
     limit: int = Query(default=10, le=100),
+    workspace: Workspace = Depends(get_current_workspace),
     user: User = Depends(require_member),
     db: Session = Depends(get_db),
 ) -> JobProcessResponse:
@@ -94,13 +97,18 @@ def process_pending(
 
 @router.get("/{job_id}", response_model=JobResponse)
 def get_job(
-    job_id: str, _: User = Depends(get_current_user), db: Session = Depends(get_db)
+    job_id: str,
+    workspace: Workspace = Depends(get_current_workspace),
+    _: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ) -> JobResponse:
     try:
         jid = uuid.UUID(job_id)
     except ValueError:
         raise HTTPException(status_code=422, detail="Invalid id")
-    job = db.get(BackgroundJob, jid)
+    job = db.query(BackgroundJob).filter(
+        BackgroundJob.id == jid, BackgroundJob.workspace_id == workspace.id
+    ).first()
     if job is None:
         raise HTTPException(status_code=404, detail="Job not found")
     return _to_response(job)

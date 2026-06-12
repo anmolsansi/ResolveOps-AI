@@ -14,11 +14,12 @@ def _make_csv(rows: list[dict]) -> io.BytesIO:
     return io.BytesIO("\n".join(lines).encode("utf-8"))
 
 
-def _upload(client, rows):
+def _upload(client, rows, headers=None):
     csv_file = _make_csv(rows)
     return client.post(
         "/tickets/upload",
         files={"file": ("tickets.csv", csv_file, "text/csv")},
+        headers=headers,
     )
 
 
@@ -40,17 +41,17 @@ ROWS = [
 ]
 
 
-def test_eval_run_default_questions(client):
-    _upload(client, ROWS)
-    resp = client.post("/eval/run", json={})
+def test_eval_run_default_questions(client, auth_headers):
+    _upload(client, ROWS, auth_headers)
+    resp = client.post("/eval/run", json={}, headers=auth_headers)
     assert resp.status_code == 200
     data = resp.json()
     assert data["total_questions"] == 5
     assert data["passed_count"] + data["failed_count"] == 5
 
 
-def test_eval_run_custom_questions(client):
-    _upload(client, ROWS)
+def test_eval_run_custom_questions(client, auth_headers):
+    _upload(client, ROWS, auth_headers)
     resp = client.post(
         "/eval/run",
         json={
@@ -60,6 +61,7 @@ def test_eval_run_custom_questions(client):
                 {"question": "Something completely unrelated to anything"},
             ],
         },
+        headers=auth_headers,
     )
     assert resp.status_code == 200
     data = resp.json()
@@ -67,45 +69,45 @@ def test_eval_run_custom_questions(client):
     assert data["total_questions"] == 2
 
 
-def test_eval_list_runs(client):
-    _upload(client, ROWS)
-    client.post("/eval/run", json={"name": "run-1"})
-    client.post("/eval/run", json={"name": "run-2"})
-    resp = client.get("/eval/runs")
+def test_eval_list_runs(client, auth_headers):
+    _upload(client, ROWS, auth_headers)
+    client.post("/eval/run", json={"name": "run-1"}, headers=auth_headers)
+    client.post("/eval/run", json={"name": "run-2"}, headers=auth_headers)
+    resp = client.get("/eval/runs", headers=auth_headers)
     assert resp.status_code == 200
     data = resp.json()
     assert len(data) >= 2
 
 
-def test_eval_empty_db(client):
-    resp = client.post("/eval/run", json={})
+def test_eval_empty_db(client, auth_headers):
+    resp = client.post("/eval/run", json={}, headers=auth_headers)
     assert resp.status_code == 200
     data = resp.json()
     assert data["total_questions"] == 5
     assert data["failed_count"] == 5
 
 
-def test_eval_run_has_average_confidence(client):
-    _upload(client, ROWS)
-    resp = client.post("/eval/run", json={})
+def test_eval_run_has_average_confidence(client, auth_headers):
+    _upload(client, ROWS, auth_headers)
+    resp = client.post("/eval/run", json={}, headers=auth_headers)
     assert resp.status_code == 200
     data = resp.json()
     assert "average_confidence" in data
     assert isinstance(data["average_confidence"], float)
 
 
-def test_eval_run_has_average_latency(client):
-    _upload(client, ROWS)
-    resp = client.post("/eval/run", json={})
+def test_eval_run_has_average_latency(client, auth_headers):
+    _upload(client, ROWS, auth_headers)
+    resp = client.post("/eval/run", json={}, headers=auth_headers)
     assert resp.status_code == 200
     data = resp.json()
     assert "average_latency_ms" in data
     assert data["average_latency_ms"] >= 0
 
 
-def test_eval_run_has_results_json(client):
-    _upload(client, ROWS)
-    resp = client.post("/eval/run", json={})
+def test_eval_run_has_results_json(client, auth_headers):
+    _upload(client, ROWS, auth_headers)
+    resp = client.post("/eval/run", json={}, headers=auth_headers)
     assert resp.status_code == 200
     data = resp.json()
     assert "results_json" in data
@@ -119,17 +121,22 @@ def test_eval_run_has_results_json(client):
         assert "confidence" in result
 
 
-def test_eval_list_empty(client):
-    resp = client.get("/eval/runs")
+def test_eval_list_empty(client, auth_headers):
+    resp = client.get("/eval/runs", headers=auth_headers)
     assert resp.status_code == 200
     data = resp.json()
     assert data == []
 
 
-def test_eval_run_records_rag_queries(client):
-    _upload(client, ROWS)
-    client.post("/eval/run", json={})
-    resp = client.get("/dashboard/retrieval")
+def test_eval_run_records_rag_queries(client, auth_headers):
+    _upload(client, ROWS, auth_headers)
+    client.post("/eval/run", json={}, headers=auth_headers)
+    resp = client.get("/dashboard/retrieval", headers=auth_headers)
     assert resp.status_code == 200
     data = resp.json()
     assert data["total_queries"] >= 5
+
+
+def test_eval_requires_auth(client):
+    resp = client.post("/eval/run", json={})
+    assert resp.status_code == 401

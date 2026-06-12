@@ -35,12 +35,13 @@ def build_assist(
     customer_tier: str | None = None,
     product_area: str | None = None,
     top_k: int = 5,
+    workspace_id=None,
 ) -> dict:
     question = f"{subject}\n{body}".strip()
     filters: dict[str, str | None] | None = (
         {"product_area": product_area} if product_area else None
     )
-    results = retrieve_chunks(db, question, filters=filters, top_k=top_k)
+    results = retrieve_chunks(db, question, filters=filters, top_k=top_k, workspace_id=workspace_id)
     confidence = compute_confidence([r["score"] for r in results])
     retrieved_ticket_ids = list(dict.fromkeys(r["ticket_id"] for r in results))
 

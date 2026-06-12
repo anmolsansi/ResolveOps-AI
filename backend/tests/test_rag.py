@@ -14,11 +14,12 @@ def _make_csv(rows: list[dict]) -> io.BytesIO:
     return io.BytesIO("\n".join(lines).encode("utf-8"))
 
 
-def _upload(client, rows):
+def _upload(client, rows, headers=None):
     csv_file = _make_csv(rows)
     return client.post(
         "/tickets/upload",
         files={"file": ("tickets.csv", csv_file, "text/csv")},
+        headers=headers,
     )
 
 
@@ -40,11 +41,12 @@ ROWS = [
 ]
 
 
-def test_rag_query_with_data(client):
-    _upload(client, ROWS)
+def test_rag_query_with_data(client, auth_headers):
+    _upload(client, ROWS, auth_headers)
     resp = client.post(
         "/rag/query",
         json={"question": "How to fix a billing error?"},
+        headers=auth_headers,
     )
     assert resp.status_code == 200
     data = resp.json()
@@ -54,34 +56,37 @@ def test_rag_query_with_data(client):
     assert "latency_ms" in data
 
 
-def test_rag_query_empty_db(client):
+def test_rag_query_empty_db(client, auth_headers):
     resp = client.post(
         "/rag/query",
         json={"question": "How to fix a billing error?"},
+        headers=auth_headers,
     )
     assert resp.status_code == 200
     data = resp.json()
     assert "enough context" in data["answer"].lower()
 
 
-def test_rag_query_with_filters(client):
-    _upload(client, ROWS)
+def test_rag_query_with_filters(client, auth_headers):
+    _upload(client, ROWS, auth_headers)
     resp = client.post(
         "/rag/query",
         json={
             "question": "Billing problem",
             "filters": {"product_area": "Billing"},
         },
+        headers=auth_headers,
     )
     assert resp.status_code == 200
     data = resp.json()
     assert isinstance(data["retrieved_chunks"], list)
 
 
-def test_rag_query_low_confidence_fallback(client):
+def test_rag_query_low_confidence_fallback(client, auth_headers):
     resp = client.post(
         "/rag/query",
         json={"question": "What is quantum physics?"},
+        headers=auth_headers,
     )
     assert resp.status_code == 200
     data = resp.json()
@@ -90,11 +95,12 @@ def test_rag_query_low_confidence_fallback(client):
     assert data["citations"] == []
 
 
-def test_rag_query_citations_structure(client):
-    _upload(client, ROWS)
+def test_rag_query_citations_structure(client, auth_headers):
+    _upload(client, ROWS, auth_headers)
     resp = client.post(
         "/rag/query",
         json={"question": "billing error subscription refund"},
+        headers=auth_headers,
     )
     assert resp.status_code == 200
     data = resp.json()
@@ -104,11 +110,12 @@ def test_rag_query_citations_structure(client):
         assert citation.startswith("T-")
 
 
-def test_rag_query_returns_retrieved_chunks(client):
-    _upload(client, ROWS)
+def test_rag_query_returns_retrieved_chunks(client, auth_headers):
+    _upload(client, ROWS, auth_headers)
     resp = client.post(
         "/rag/query",
         json={"question": "billing error", "top_k": 3},
+        headers=auth_headers,
     )
     assert resp.status_code == 200
     data = resp.json()
@@ -120,11 +127,12 @@ def test_rag_query_returns_retrieved_chunks(client):
         assert "preview" in chunk
 
 
-def test_rag_query_logs_estimated_cost(client):
-    _upload(client, ROWS)
+def test_rag_query_logs_estimated_cost(client, auth_headers):
+    _upload(client, ROWS, auth_headers)
     resp = client.post(
         "/rag/query",
         json={"question": "billing error"},
+        headers=auth_headers,
     )
     assert resp.status_code == 200
     data = resp.json()
@@ -132,24 +140,25 @@ def test_rag_query_logs_estimated_cost(client):
     assert data["estimated_cost_usd"] == 0.0  # mock provider
 
 
-def test_rag_query_filter_no_match(client):
-    _upload(client, ROWS)
+def test_rag_query_filter_no_match(client, auth_headers):
+    _upload(client, ROWS, auth_headers)
     resp = client.post(
         "/rag/query",
         json={
             "question": "billing error",
             "filters": {"product_area": "Nonexistent"},
         },
+        headers=auth_headers,
     )
     assert resp.status_code == 200
     data = resp.json()
     assert "enough context" in data["answer"].lower()
 
 
-def test_rag_query_records_in_db(client):
-    _upload(client, ROWS)
-    client.post("/rag/query", json={"question": "billing error"})
-    resp = client.get("/dashboard/retrieval")
+def test_rag_query_records_in_db(client, auth_headers):
+    _upload(client, ROWS, auth_headers)
+    client.post("/rag/query", json={"question": "billing error"}, headers=auth_headers)
+    resp = client.get("/dashboard/retrieval", headers=auth_headers)
     assert resp.status_code == 200
     data = resp.json()
     assert data["total_queries"] >= 1
@@ -176,14 +185,20 @@ LOGIN_ROWS = [
 ]
 
 
-def test_rag_related_query_returns_cited_answer(client):
-    _upload(client, LOGIN_ROWS)
+def test_rag_related_query_returns_cited_answer(client, auth_headers):
+    _upload(client, LOGIN_ROWS, auth_headers)
     resp = client.post(
         "/rag/query",
         json={"question": "How to fix login issues?"},
+        headers=auth_headers,
     )
     assert resp.status_code == 200
     data = resp.json()
     assert "enough context" not in data["answer"].lower()
     assert len(data["citations"]) > 0
     assert data["confidence"] >= 0.3
+
+
+def test_rag_requires_auth(client):
+    resp = client.post("/rag/query", json={"question": "test"})
+    assert resp.status_code == 401

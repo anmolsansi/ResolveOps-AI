@@ -26,11 +26,15 @@ def _level(score: float) -> str:
     return "low"
 
 
-def detect_sla_risks(db: Session, now: datetime | None = None) -> list[dict]:
+def detect_sla_risks(db: Session, now: datetime | None = None, workspace_id=None) -> list[dict]:
     now = now or datetime.now(tz=None)
     risks: list[dict] = []
 
-    for t in db.query(Ticket).all():
+    query = db.query(Ticket)
+    if workspace_id is not None:
+        query = query.filter(Ticket.workspace_id == workspace_id)
+
+    for t in query.all():
         if t.status.lower() in CLOSED_STATUSES or t.resolved_at is not None:
             continue
         if t.created_at is None:

@@ -10,9 +10,10 @@ def _admin_headers(client):
     return {"Authorization": f"Bearer {token}"}
 
 
-def _make_ticket(db, tid="TK-1", body="login fails", title="Login issue"):
+def _make_ticket(db, tid="TK-1", body="login fails", title="Login issue", workspace_id=None):
     ticket = Ticket(
         id=tid,
+        workspace_id=workspace_id,
         title=title,
         body=body,
         product_area="Authentication",
@@ -55,7 +56,6 @@ def test_embedding_backfill_job(client, db_session):
     assert result["succeeded"] == 1
     assert result["jobs"][0]["status"] == "succeeded"
 
-    # the chunk now has an embedding
     chunk = db_session.query(TicketChunk).first()
     db_session.refresh(chunk)
     assert chunk.embedding is not None

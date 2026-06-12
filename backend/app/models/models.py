@@ -22,6 +22,9 @@ class IngestionBatch(Base):
     __tablename__ = "ingestion_batches"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    workspace_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("workspaces.id"), nullable=True, index=True
+    )
     filename: Mapped[str] = mapped_column(String(500), nullable=False)
     total_count: Mapped[int] = mapped_column(Integer, default=0)
     valid_count: Mapped[int] = mapped_column(Integer, default=0)
@@ -38,6 +41,9 @@ class Ticket(Base):
     __tablename__ = "tickets"
 
     id: Mapped[str] = mapped_column(String(200), primary_key=True)
+    workspace_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("workspaces.id"), nullable=True, index=True
+    )
     title: Mapped[str] = mapped_column(String(1000), nullable=False)
     body: Mapped[str] = mapped_column(Text, nullable=False)
     product_area: Mapped[str] = mapped_column(String(200), nullable=False)
@@ -91,6 +97,9 @@ class RagQuery(Base):
     __tablename__ = "rag_queries"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    workspace_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("workspaces.id"), nullable=True, index=True
+    )
     question: Mapped[str] = mapped_column(Text, nullable=False)
     filters_json: Mapped[str | None] = mapped_column(Text, nullable=True)
     answer: Mapped[str] = mapped_column(Text, nullable=False)
@@ -115,6 +124,9 @@ class Connector(Base):
     __tablename__ = "connectors"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    workspace_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("workspaces.id"), nullable=True, index=True
+    )
     provider: Mapped[str] = mapped_column(String(50), nullable=False)
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     config_json: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -149,6 +161,9 @@ class KbArticle(Base):
     __tablename__ = "kb_articles"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    workspace_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("workspaces.id"), nullable=True, index=True
+    )
     title: Mapped[str] = mapped_column(String(500), nullable=False)
     product_area: Mapped[str] = mapped_column(String(200), nullable=False)
     issue_type: Mapped[str] = mapped_column(String(200), default="")
@@ -163,6 +178,9 @@ class EvalRun(Base):
     __tablename__ = "eval_runs"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    workspace_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("workspaces.id"), nullable=True, index=True
+    )
     name: Mapped[str] = mapped_column(String(500), default="")
     total_questions: Mapped[int] = mapped_column(Integer, default=0)
     passed_count: Mapped[int] = mapped_column(Integer, default=0)
@@ -177,6 +195,9 @@ class SavedEvalQuestion(Base):
     __tablename__ = "saved_eval_questions"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    workspace_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("workspaces.id"), nullable=True, index=True
+    )
     question: Mapped[str] = mapped_column(Text, nullable=False)
     filters_json: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
@@ -266,6 +287,9 @@ class PromptTemplate(Base):
     __tablename__ = "prompt_templates"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    workspace_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("workspaces.id"), nullable=True, index=True
+    )
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     content: Mapped[str] = mapped_column(Text, nullable=False)
@@ -281,6 +305,9 @@ class BackgroundJob(Base):
     __tablename__ = "background_jobs"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    workspace_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("workspaces.id"), nullable=True, index=True
+    )
     job_type: Mapped[str] = mapped_column(String(50), nullable=False)
     # pending | running | succeeded | failed
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="pending", index=True)

@@ -38,10 +38,14 @@ def _resolution_steps(tickets: list[Ticket]) -> list[str]:
     return steps
 
 
-def generate_kb(db: Session, min_cluster_size: int = MIN_CLUSTER_SIZE) -> list[KbArticle]:
+def generate_kb(db: Session, min_cluster_size: int = MIN_CLUSTER_SIZE, workspace_id=None) -> list[KbArticle]:
+    query = db.query(Ticket)
+    if workspace_id is not None:
+        query = query.filter(Ticket.workspace_id == workspace_id)
+
     resolved = [
         t
-        for t in db.query(Ticket).all()
+        for t in query.all()
         if t.status.lower() in RESOLVED_STATUSES and (t.resolution or "").strip()
     ]
 
@@ -49,7 +53,11 @@ def generate_kb(db: Session, min_cluster_size: int = MIN_CLUSTER_SIZE) -> list[K
     for t in resolved:
         groups[(t.product_area, t.issue_type)].append(t)
 
-    db.query(KbArticle).delete()
+    # Delete existing KB articles for this workspace
+    delete_query = db.query(KbArticle)
+    if workspace_id is not None:
+        delete_query = delete_query.filter(KbArticle.workspace_id == workspace_id)
+    delete_query.delete()
 
     articles: list[KbArticle] = []
     for (area, issue_type), tickets in sorted(groups.items()):
@@ -63,6 +71,7 @@ def generate_kb(db: Session, min_cluster_size: int = MIN_CLUSTER_SIZE) -> list[K
             f"{', '.join(themes) if themes else 'n/a'}."
         )
         article = KbArticle(
+            workspace_id=workspace_id,
             title=f"{area} — {issue_type}: common resolutions",
             product_area=area,
             issue_type=issue_type,

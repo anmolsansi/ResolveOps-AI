@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Resume of Anmol Sansi" />
+  <title>Anmol Sansi Resume</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f5f7fb;
+      --card: #ffffff;
+      --text: #172033;
+      --muted: #607089;
+      --border: #dce3ef;
+      --accent: #1f6feb;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Arial, Helvetica, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    header {
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+      padding: 18px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 22px;
+      line-height: 1.2;
+    }
+
+    .subtitle {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    a.button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 14px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      color: var(--accent);
+      background: #fff;
+      text-decoration: none;
+      font-weight: 700;
+      font-size: 14px;
+    }
+
+    main {
+      width: min(1100px, calc(100% - 32px));
+      margin: 24px auto;
+    }
+
+    .notice {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 18px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    iframe {
+      width: 100%;
+      height: calc(100vh - 140px);
+      min-height: 700px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: var(--card);
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>Anmol Sansi Resume</h1>
+      <p class="subtitle">Latest resume hosted through GitHub Pages.</p>
+    </div>
+    <nav class="actions" id="actions">
+      <a class="button" href="https://github.com/anmolsansi/Anmol-Sansi-Resume" target="_blank" rel="noreferrer">View Repository</a>
+    </nav>
+  </header>
+
+  <main id="content">
+    <div class="notice">Loading resume PDF...</div>
+  </main>
+
+  <script>
+    const repoApiUrl = 'https://api.github.com/repos/anmolsansi/Anmol-Sansi-Resume/contents/';
+    const content = document.getElementById('content');
+    const actions = document.getElementById('actions');
+
+    async function loadResume() {
+      try {
+        const response = await fetch(repoApiUrl);
+        if (!response.ok) {
+          throw new Error('Unable to read repository contents.');
+        }
+
+        const files = await response.json();
+        const pdfFiles = files
+          .filter((file) => file.type === 'file' && file.name.toLowerCase().endsWith('.pdf'))
+          .sort((a, b) => a.name.localeCompare(b.name));
+
+        if (!pdfFiles.length) {
+          content.innerHTML = '<div class="notice">No PDF file was found in the repository root. Add your resume PDF to the root of the repo and push to main.</div>';
+          return;
+        }
+
+        const resume = pdfFiles[0];
+        const pdfUrl = resume.download_url;
+
+        const downloadLink = document.createElement('a');
+        downloadLink.className = 'button';
+        downloadLink.href = pdfUrl;
+        downloadLink.target = '_blank';
+        downloadLink.rel = 'noreferrer';
+        downloadLink.textContent = 'Download PDF';
+        actions.prepend(downloadLink);
+
+        content.innerHTML = '';
+        const iframe = document.createElement('iframe');
+        iframe.src = pdfUrl;
+        iframe.title = 'Anmol Sansi Resume PDF';
+        content.appendChild(iframe);
+      } catch (error) {
+        content.innerHTML = '<div class="notice">Resume could not be loaded. Open the repository and confirm the PDF is committed to the root folder.</div>';
+      }
+    }
+
+    loadResume();
+  </script>
+</body>
+</html>

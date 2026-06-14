@@ -540,3 +540,44 @@ export async function listCustomers(params: {
 export async function getCustomer(id: string): Promise<CustomerProfileDetailResponse> {
   return request<CustomerProfileDetailResponse>(`/conversations/customers/${encodeURIComponent(id)}`, { headers: authHeaders() });
 }
+
+// ---------------- V7: Action-Taking Agent Workflows ----------------
+
+export async function listTools(): Promise<ToolListResponse> {
+  return request<ToolListResponse>("/tools", { headers: authHeaders() });
+}
+
+export async function getTool(toolId: string): Promise<ToolSummary> {
+  return request<ToolSummary>(`/tools/${encodeURIComponent(toolId)}`, { headers: authHeaders() });
+}
+
+export async function updateTool(
+  toolId: string,
+  update: { enabled?: boolean; description?: string },
+): Promise<ToolSummary> {
+  return request<ToolSummary>(`/tools/${encodeURIComponent(toolId)}`, {
+    method: "PUT",
+    headers: authHeaders({ "Content-Type": "application/json" }),
+    body: JSON.stringify(update),
+  });
+}
+
+export async function executeTool(
+  toolId: string,
+  parameters: Record<string, unknown>,
+  conversationId?: string,
+): Promise<ToolExecutionResponse> {
+  return request<ToolExecutionResponse>(`/tools/${encodeURIComponent(toolId)}/execute`, {
+    method: "POST",
+    headers: authHeaders({ "Content-Type": "application/json" }),
+    body: JSON.stringify({ parameters, conversation_id: conversationId || null }),
+  });
+}
+
+export async function listToolExecutions(): Promise<ToolExecutionListResponse> {
+  return request<ToolExecutionListResponse>("/tools/executions", { headers: authHeaders() });
+}
+
+export async function listActionLogs(): Promise<ActionLogListResponse> {
+  return request<ActionLogListResponse>("/tools/action-logs", { headers: authHeaders() });
+}

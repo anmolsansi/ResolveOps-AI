@@ -1,6 +1,7 @@
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import AppLayout from "./components/AppLayout";
 import AccountPage from "./pages/AccountPage";
+import ActionLogsPage from "./pages/ActionLogsPage";
 import AssistPage from "./pages/AssistPage";
 import AuditPage from "./pages/AuditPage";
 import ConnectorsPage from "./pages/ConnectorsPage";
@@ -21,6 +22,8 @@ import SettingsPage from "./pages/SettingsPage";
 import SlaPage from "./pages/SlaPage";
 import TicketDetailPage from "./pages/TicketDetailPage";
 import TicketsPage from "./pages/TicketsPage";
+import ToolDetailPage from "./pages/ToolDetailPage";
+import ToolsPage from "./pages/ToolsPage";
 import UploadPage from "./pages/UploadPage";
 import WidgetHost from "./pages/WidgetHost";
 import WorkspacesPage from "./pages/WorkspacesPage";
@@ -46,6 +49,9 @@ export default function App() {
           <Route path="/customers" element={<CustomersPage />} />
           <Route path="/customers/:id" element={<CustomerProfilePage />} />
           <Route path="/handoffs" element={<HandoffsPage />} />
+          <Route path="/tools" element={<ToolsPage />} />
+          <Route path="/tools/:id" element={<ToolDetailPage />} />
+          <Route path="/action-logs" element={<ActionLogsPage />} />
           <Route path="/widget" element={<WidgetHost />} />
           <Route path="/account" element={<AccountPage />} />
           <Route path="/workspaces" element={<WorkspacesPage />} />

@@ -35,6 +35,10 @@ class Settings(BaseSettings):
         "legal", "attorney", "sue", "regulatory", "compliance", "lawyer",
     ]
 
+    # V7 — action-taking agent workflows
+    tool_auto_register: bool = True
+    tool_max_executions_per_conversation: int = 5
+
     model_config = {"env_file": ".env", "extra": "ignore"}
 
 

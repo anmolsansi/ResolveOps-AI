@@ -10,6 +10,8 @@ const NAV_ITEMS = [
   { to: "/conversations", label: "Conversations" },
   { to: "/customers", label: "Customers" },
   { to: "/handoffs", label: "Handoffs" },
+  { to: "/tools", label: "Tools" },
+  { to: "/action-logs", label: "Action Logs" },
   { to: "/connectors", label: "Connectors" },
   { to: "/kb", label: "Knowledge Base" },
   { to: "/sla", label: "SLA Risk" },

@@ -1,5 +1,5 @@
 """V6 widget service: processes customer-facing chat messages through the RAG
-pipeline and manages conversation sessions."""
+pipeline and manages conversation sessions. V7 adds automatic tool execution."""
 import json
 from datetime import datetime
 
@@ -15,6 +15,8 @@ from app.models.models import (
 from app.services.prompts import get_active_prompt_text
 from app.services.providers.factory import get_answer_provider
 from app.services.retrieval import compute_confidence, retrieve_chunks
+from app.services.tool_execution import execute_tool
+from app.services.tool_registry import get_tool_by_slug, upsert_builtin_tools
 
 _ANSWER_THRESHOLD = 0.6
 
@@ -196,6 +198,10 @@ def process_widget_message(
     db.commit()
     db.refresh(ai_msg)
 
+    # V7: auto tool execution
+    tool_results = _run_auto_tools(db, message, workspace, conv.id)
+    db.commit()
+
     return {
         "answer": answer,
         "conversation_id": conv.id,
@@ -205,6 +211,7 @@ def process_widget_message(
         "is_fallback": is_fallback,
         "sentiment": sentiment,
         "should_escalate": escalate,
+        "tool_results": tool_results,
     }
 
 
@@ -219,3 +226,109 @@ def _infer_intent(message: str) -> str:
     if any(kw in lower for kw in ["login", "password", "reset", "access"]):
         return "account_access_issue"
     return "general_inquiry"
+
+
+# ---------------------------------------------------------------------------
+# V7 — Auto tool detection and execution
+# ---------------------------------------------------------------------------
+
+_TOOL_INTENT_MAP = [
+    {
+        "keywords": ["ticket", "create ticket", "file a ticket", "open a ticket", "report issue"],
+        "slug": "create_ticket",
+        "param_extractor": "_extract_ticket_params",
+    },
+    {
+        "keywords": ["my tickets", "check my ticket", "ticket status", "open tickets"],
+        "slug": "lookup_customer",
+        "param_extractor": "_extract_customer_lookup_params",
+    },
+    {
+        "keywords": ["knowledge base", "kb article", "help doc", "documentation", "how to"],
+        "slug": "search_knowledge_base",
+        "param_extractor": "_extract_kb_params",
+    },
+    {
+        "keywords": ["sla", "breach", "overdue", "aging ticket", "slipping"],
+        "slug": "check_sla_status",
+        "param_extractor": "_extract_sla_params",
+    },
+    {
+        "keywords": ["handoff", "human agent", "talk to someone", "escalate", "real person"],
+        "slug": "list_handoffs",
+        "param_extractor": "_extract_handoff_params",
+    },
+]
+
+
+def _extract_ticket_params(message: str) -> dict:
+    return {
+        "title": message[:200],
+        "body": message,
+        "product_area": "other",
+        "issue_type": "other",
+        "priority": "medium",
+    }
+
+
+def _extract_customer_lookup_params(message: str) -> dict:
+    return {}
+
+
+def _extract_kb_params(message: str) -> dict:
+    return {"query": message}
+
+
+def _extract_sla_params(message: str) -> dict:
+    return {}
+
+
+def _extract_handoff_params(message: str) -> dict:
+    return {"status": "pending"}
+
+
+def _detect_tool_intent(message: str) -> tuple[str | None, dict]:
+    """Detect if a message should trigger a tool. Returns (tool_slug, params)."""
+    lower = message.lower()
+    for mapping in _TOOL_INTENT_MAP:
+        if any(kw in lower for kw in mapping["keywords"]):
+            extractor = globals()[mapping["param_extractor"]]
+            return mapping["slug"], extractor(message)
+    return None, {}
+
+
+def _run_auto_tools(
+    db: Session,
+    message: str,
+    workspace,
+    conversation_id,
+) -> list[dict]:
+    """Attempt auto tool execution for the message. Returns list of tool results."""
+    if not settings.tool_auto_register:
+        return []
+
+    upsert_builtin_tools(db, workspace.id)
+
+    tool_slug, params = _detect_tool_intent(message)
+    if not tool_slug:
+        return []
+
+    tool = get_tool_by_slug(db, workspace.id, tool_slug)
+    if not tool or not tool.enabled:
+        return []
+
+    execution = execute_tool(
+        db, workspace.id, tool, params,
+        conversation_id=conversation_id, triggered_by="ai",
+    )
+    db.flush()
+
+    result = {
+        "tool_name": tool.name,
+        "tool_slug": tool.slug,
+        "status": execution.status,
+        "output": json.loads(execution.output_json) if execution.output_json else None,
+        "error": execution.error,
+        "latency_ms": execution.latency_ms,
+    }
+    return [result]

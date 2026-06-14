@@ -32,6 +32,7 @@ class WidgetChatResponse(BaseModel):
     is_fallback: bool
     sentiment: str | None = None
     should_escalate: bool = False
+    tool_results: list[dict] = []
 
 
 class WidgetFeedbackRequest(BaseModel):

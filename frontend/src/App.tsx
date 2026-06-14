@@ -4,8 +4,13 @@ import AccountPage from "./pages/AccountPage";
 import AssistPage from "./pages/AssistPage";
 import AuditPage from "./pages/AuditPage";
 import ConnectorsPage from "./pages/ConnectorsPage";
+import ConversationDetailPage from "./pages/ConversationDetailPage";
+import ConversationsPage from "./pages/ConversationsPage";
+import CustomerProfilePage from "./pages/CustomerProfilePage";
+import CustomersPage from "./pages/CustomersPage";
 import DashboardPage from "./pages/DashboardPage";
 import EvalRunsPage from "./pages/EvalRunsPage";
+import HandoffsPage from "./pages/HandoffsPage";
 import JobsPage from "./pages/JobsPage";
 import KnowledgeBasePage from "./pages/KnowledgeBasePage";
 import PiiPage from "./pages/PiiPage";
@@ -17,6 +22,7 @@ import SlaPage from "./pages/SlaPage";
 import TicketDetailPage from "./pages/TicketDetailPage";
 import TicketsPage from "./pages/TicketsPage";
 import UploadPage from "./pages/UploadPage";
+import WidgetHost from "./pages/WidgetHost";
 import WorkspacesPage from "./pages/WorkspacesPage";
 
 export default function App() {
@@ -35,6 +41,12 @@ export default function App() {
           <Route path="/assist" element={<AssistPage />} />
           <Route path="/kb" element={<KnowledgeBasePage />} />
           <Route path="/sla" element={<SlaPage />} />
+          <Route path="/conversations" element={<ConversationsPage />} />
+          <Route path="/conversations/:id" element={<ConversationDetailPage />} />
+          <Route path="/customers" element={<CustomersPage />} />
+          <Route path="/customers/:id" element={<CustomerProfilePage />} />
+          <Route path="/handoffs" element={<HandoffsPage />} />
+          <Route path="/widget" element={<WidgetHost />} />
           <Route path="/account" element={<AccountPage />} />
           <Route path="/workspaces" element={<WorkspacesPage />} />
           <Route path="/prompts" element={<PromptsPage />} />

@@ -7,6 +7,7 @@ from app.api.assist import router as assist_router
 from app.api.audit import router as audit_router
 from app.api.auth import router as auth_router
 from app.api.connectors import router as connectors_router
+from app.api.conversations import router as conversations_router
 from app.api.dashboard import router as dashboard_router
 from app.api.eval import router as eval_router
 from app.api.health import router as health_router
@@ -20,6 +21,7 @@ from app.api.retention import router as retention_router
 from app.api.settings import router as settings_router
 from app.api.sla import router as sla_router
 from app.api.tickets import router as tickets_router
+from app.api.widget import router as widget_router
 from app.api.workspaces import router as workspaces_router
 
 
@@ -55,6 +57,8 @@ def create_app() -> FastAPI:
     application.include_router(pii_router, prefix="/pii", tags=["pii"])
     application.include_router(prompts_router, prefix="/prompts", tags=["prompts"])
     application.include_router(jobs_router, prefix="/jobs", tags=["jobs"])
+    application.include_router(widget_router, prefix="/widget", tags=["widget"])
+    application.include_router(conversations_router, prefix="/conversations", tags=["conversations"])
     return application
 
 

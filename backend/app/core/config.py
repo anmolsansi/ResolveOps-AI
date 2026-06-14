@@ -24,6 +24,17 @@ class Settings(BaseSettings):
     retention_rag_query_days: int = 0
     retention_audit_log_days: int = 0
 
+    # V6 — customer-facing widget
+    widget_api_key: str = "dev-widget-key"
+    escalation_confidence_threshold: float = 0.3
+    escalation_sentiment_keywords: list[str] = [
+        "angry", "furious", "unacceptable", "lawsuit", "cancel",
+        "refund", "terrible", "worst", "disgusted", "outraged",
+    ]
+    policy_sensitive_keywords: list[str] = [
+        "legal", "attorney", "sue", "regulatory", "compliance", "lawyer",
+    ]
+
     model_config = {"env_file": ".env", "extra": "ignore"}
 
 

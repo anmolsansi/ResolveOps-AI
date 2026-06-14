@@ -320,3 +320,129 @@ class BackgroundJob(Base):
     )
     started_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     finished_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+
+# ---------------------------------------------------------------------------
+# V6 — Customer-Facing AI Support Agent
+# ---------------------------------------------------------------------------
+
+
+class CustomerProfile(Base):
+    __tablename__ = "customer_profiles"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    workspace_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("workspaces.id"), nullable=True, index=True
+    )
+    external_id: Mapped[str] = mapped_column(String(320), nullable=False, index=True)
+    name: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    email: Mapped[str | None] = mapped_column(String(320), nullable=True)
+    company: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    customer_tier: Mapped[str] = mapped_column(String(100), default="free")
+    sentiment_score: Mapped[float] = mapped_column(Float, default=0.0)
+    total_conversations: Mapped[int] = mapped_column(Integer, default=0)
+    unresolved_issues: Mapped[int] = mapped_column(Integer, default=0)
+    last_seen_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+    conversations: Mapped[list["Conversation"]] = relationship(back_populates="customer")
+
+
+class Conversation(Base):
+    __tablename__ = "conversations"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    workspace_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("workspaces.id"), nullable=True, index=True
+    )
+    customer_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("customer_profiles.id"), nullable=False, index=True
+    )
+    channel: Mapped[str] = mapped_column(String(50), nullable=False, default="widget")
+    # open | waiting_for_customer | resolved | escalated | reopened
+    status: Mapped[str] = mapped_column(String(50), nullable=False, default="open", index=True)
+    subject: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    product_area: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    assigned_agent_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=True
+    )
+    sentiment: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    # ai_contained | human_escalated | bad_answer | missing_knowledge | customer_reopened
+    ai_resolution_outcome: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    resolution_summary: Mapped[str | None] = mapped_column(Text, nullable=True)
+    started_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    last_message_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    resolved_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+    customer: Mapped["CustomerProfile"] = relationship(back_populates="conversations")
+    messages: Mapped[list["ConversationMessage"]] = relationship(back_populates="conversation")
+    handoffs: Mapped[list["HumanHandoff"]] = relationship(back_populates="conversation")
+
+
+class ConversationMessage(Base):
+    __tablename__ = "conversation_messages"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    conversation_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("conversations.id"), nullable=False, index=True
+    )
+    # customer | agent | ai | system
+    role: Mapped[str] = mapped_column(String(50), nullable=False)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    citations_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+    confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
+    is_escalation_trigger: Mapped[bool] = mapped_column(Boolean, default=False)
+    metadata_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+    conversation: Mapped["Conversation"] = relationship(back_populates="messages")
+
+
+class HumanHandoff(Base):
+    __tablename__ = "human_handoffs"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    conversation_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("conversations.id"), nullable=False, index=True
+    )
+    workspace_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("workspaces.id"), nullable=True, index=True
+    )
+    trigger_reason: Mapped[str] = mapped_column(String(100), nullable=False)
+    summary: Mapped[str] = mapped_column(Text, nullable=False)
+    likely_intent: Mapped[str] = mapped_column(String(500), nullable=False)
+    customer_profile_snapshot: Mapped[str] = mapped_column(Text, nullable=False)
+    cited_docs_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+    suggested_reply: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # pending | acknowledged | resolved
+    status: Mapped[str] = mapped_column(String(50), nullable=False, default="pending", index=True)
+    assigned_to: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    resolved_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+    conversation: Mapped["Conversation"] = relationship(back_populates="handoffs")
+
+
+class ResolutionOutcome(Base):
+    __tablename__ = "resolution_outcomes"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    conversation_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("conversations.id"), nullable=False, index=True
+    )
+    workspace_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("workspaces.id"), nullable=True, index=True
+    )
+    # ai_contained | human_escalated | bad_answer | missing_knowledge | customer_reopened
+    outcome: Mapped[str] = mapped_column(String(50), nullable=False)
+    confidence_at_resolution: Mapped[float] = mapped_column(Float, default=0.0)
+    total_messages: Mapped[int] = mapped_column(Integer, default=0)
+    ai_message_count: Mapped[int] = mapped_column(Integer, default=0)
+    human_message_count: Mapped[int] = mapped_column(Integer, default=0)
+    time_to_resolution_seconds: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    customer_satisfaction: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())

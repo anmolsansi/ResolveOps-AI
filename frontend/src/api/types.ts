@@ -580,3 +580,140 @@ export interface BgJobProcessResponse {
   failed: number;
   jobs: BgJobResponse[];
 }
+
+// ---------------- V6: Customer-Facing AI Support Agent ----------------
+
+export interface ConversationSummary {
+  id: string;
+  channel: string;
+  status: string;
+  subject: string | null;
+  customer_name: string | null;
+  customer_email: string | null;
+  sentiment: string | null;
+  ai_resolution_outcome: string | null;
+  last_message_at: string;
+  created_at: string;
+}
+
+export interface ConversationListResponse {
+  items: ConversationSummary[];
+  total: number;
+  page: number;
+  page_size: number;
+}
+
+export interface ConversationMessageResponse {
+  id: string;
+  role: string;
+  content: string;
+  citations: string[] | null;
+  confidence: number | null;
+  is_escalation_trigger: boolean;
+  created_at: string;
+}
+
+export interface ConversationCustomerSummary {
+  id: string;
+  external_id: string;
+  name: string | null;
+  email: string | null;
+  company: string | null;
+  customer_tier: string;
+  sentiment_score: number;
+  total_conversations: number;
+  unresolved_issues: number;
+}
+
+export interface ConversationHandoffSummary {
+  id: string;
+  trigger_reason: string;
+  summary: string;
+  likely_intent: string;
+  suggested_reply: string | null;
+  status: string;
+  assigned_to: string | null;
+  created_at: string;
+  resolved_at: string | null;
+}
+
+export interface ConversationDetailResponse {
+  id: string;
+  channel: string;
+  status: string;
+  subject: string | null;
+  product_area: string | null;
+  sentiment: string | null;
+  ai_resolution_outcome: string | null;
+  resolution_summary: string | null;
+  customer: ConversationCustomerSummary | null;
+  messages: ConversationMessageResponse[];
+  handoffs: ConversationHandoffSummary[];
+  started_at: string;
+  last_message_at: string;
+  resolved_at: string | null;
+  created_at: string;
+}
+
+export interface CustomerProfileResponse {
+  id: string;
+  external_id: string;
+  name: string | null;
+  email: string | null;
+  company: string | null;
+  customer_tier: string;
+  sentiment_score: number;
+  total_conversations: number;
+  unresolved_issues: number;
+  last_seen_at: string | null;
+  created_at: string;
+}
+
+export interface CustomerListResponse {
+  items: CustomerProfileResponse[];
+  total: number;
+  page: number;
+  page_size: number;
+}
+
+export interface CustomerTimelineItem {
+  conversation_id: string;
+  channel: string;
+  status: string;
+  subject: string | null;
+  summary: string | null;
+  created_at: string;
+}
+
+export interface CustomerProfileDetailResponse {
+  profile: CustomerProfileResponse;
+  timeline: CustomerTimelineItem[];
+}
+
+export interface HandoffResponse {
+  id: string;
+  trigger_reason: string;
+  summary: string;
+  likely_intent: string;
+  suggested_reply: string | null;
+  status: string;
+  assigned_to: string | null;
+  created_at: string;
+  resolved_at: string | null;
+}
+
+export interface HandoffListResponse {
+  items: HandoffResponse[];
+  pending_count: number;
+}
+
+export interface ResolutionOutcomeResponse {
+  id: string;
+  conversation_id: string;
+  outcome: string;
+  confidence_at_resolution: number;
+  total_messages: number;
+  ai_message_count: number;
+  human_message_count: number;
+  created_at: string;
+}

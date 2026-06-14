@@ -7,7 +7,11 @@ import type {
   ChartsResponse,
   ConnectorListResponse,
   ConnectorSummary,
+  ConversationDetailResponse,
+  ConversationListResponse,
   CostResponse,
+  CustomerListResponse,
+  CustomerProfileDetailResponse,
   DuplicatesResponse,
   EvalCompareResponse,
   EvalConfig,
@@ -15,6 +19,7 @@ import type {
   FailedQueriesResponse,
   FeedbackResponse,
   FeedbackValue,
+  HandoffListResponse,
   JobListResponse,
   JobSummary,
   KbGenerateResponse,
@@ -28,6 +33,7 @@ import type {
   QualityResponse,
   RagFilters,
   RagQueryResponse,
+  ResolutionOutcomeResponse,
   RetentionPreviewResponse,
   RetentionRunResponse,
   RetrievalResponse,
@@ -458,4 +464,79 @@ export async function processPendingJobs(limit = 10): Promise<BgJobProcessRespon
     method: "POST",
     headers: authHeaders(),
   });
+}
+
+// ---------------- V6: Customer-Facing AI Support Agent ----------------
+
+export async function listConversations(params: {
+  page?: number;
+  page_size?: number;
+  status?: string;
+  channel?: string;
+}): Promise<ConversationListResponse> {
+  const qs = new URLSearchParams();
+  for (const [k, v] of Object.entries(params)) {
+    if (v !== undefined && v !== "") qs.set(k, String(v));
+  }
+  return request<ConversationListResponse>(`/conversations?${qs.toString()}`, { headers: authHeaders() });
+}
+
+export async function getConversation(id: string): Promise<ConversationDetailResponse> {
+  return request<ConversationDetailResponse>(`/conversations/${encodeURIComponent(id)}`, { headers: authHeaders() });
+}
+
+export async function updateConversationStatus(id: string, status: string): Promise<void> {
+  await request(`/conversations/${encodeURIComponent(id)}/status`, {
+    method: "PUT",
+    headers: authHeaders({ "Content-Type": "application/json" }),
+    body: JSON.stringify({ status }),
+  });
+}
+
+export async function sendAgentReply(id: string, content: string): Promise<{ id: string; role: string; content: string; created_at: string }> {
+  return request(`/conversations/${encodeURIComponent(id)}/reply`, {
+    method: "POST",
+    headers: authHeaders({ "Content-Type": "application/json" }),
+    body: JSON.stringify({ content }),
+  });
+}
+
+export async function resolveConversation(
+  id: string,
+  outcome: string,
+  notes?: string,
+): Promise<ResolutionOutcomeResponse> {
+  return request<ResolutionOutcomeResponse>(`/conversations/${encodeURIComponent(id)}/resolve`, {
+    method: "POST",
+    headers: authHeaders({ "Content-Type": "application/json" }),
+    body: JSON.stringify({ outcome, notes }),
+  });
+}
+
+export async function listHandoffs(params?: { status?: string }): Promise<HandoffListResponse> {
+  const qs = params?.status ? `?status=${encodeURIComponent(params.status)}` : "";
+  return request<HandoffListResponse>(`/conversations/handoffs${qs}`, { headers: authHeaders() });
+}
+
+export async function updateHandoff(id: string, status: string): Promise<void> {
+  await request(`/conversations/handoffs/${encodeURIComponent(id)}`, {
+    method: "PUT",
+    headers: authHeaders({ "Content-Type": "application/json" }),
+    body: JSON.stringify({ status }),
+  });
+}
+
+export async function listCustomers(params: {
+  page?: number;
+  page_size?: number;
+}): Promise<CustomerListResponse> {
+  const qs = new URLSearchParams();
+  for (const [k, v] of Object.entries(params)) {
+    if (v !== undefined && v !== "") qs.set(k, String(v));
+  }
+  return request<CustomerListResponse>(`/conversations/customers?${qs.toString()}`, { headers: authHeaders() });
+}
+
+export async function getCustomer(id: string): Promise<CustomerProfileDetailResponse> {
+  return request<CustomerProfileDetailResponse>(`/conversations/customers/${encodeURIComponent(id)}`, { headers: authHeaders() });
 }

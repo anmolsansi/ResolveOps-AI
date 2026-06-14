@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ResolveOps Support</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Inter, system-ui, sans-serif; background: #f9fafb; height: 100vh; display: flex; flex-direction: column; }
+    .chat-container { flex: 1; display: flex; flex-direction: column; max-width: 600px; margin: 0 auto; width: 100%; }
+    .header { background: #6366f1; color: white; padding: 16px 20px; font-weight: 600; font-size: 16px; }
+    .messages { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+    .msg { max-width: 80%; padding: 12px 16px; border-radius: 12px; font-size: 14px; line-height: 1.5; }
+    .msg.customer { align-self: flex-end; background: #6366f1; color: white; border-bottom-right-radius: 4px; }
+    .msg.ai { align-self: flex-start; background: white; color: #111; border: 1px solid #e5e7eb; border-bottom-left-radius: 4px; }
+    .msg.system { align-self: center; background: #fef3c7; color: #92400e; font-size: 12px; padding: 6px 12px; }
+    .citations { margin-top: 6px; font-size: 11px; color: #6b7280; }
+    .confidence { font-size: 11px; color: #9ca3af; margin-top: 4px; }
+    .escalation { background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 8px 12px; font-size: 12px; color: #991b1b; }
+    .input-area { padding: 16px; border-top: 1px solid #e5e7eb; display: flex; gap: 8px; background: white; }
+    .input-area input { flex: 1; padding: 12px 16px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; outline: none; }
+    .input-area input:focus { border-color: #6366f1; }
+    .input-area button { padding: 12px 20px; background: #6366f1; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 14px; }
+    .input-area button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .typing { display: flex; gap: 4px; padding: 8px 16px; }
+    .typing span { width: 6px; height: 6px; background: #9ca3af; border-radius: 50%; animation: blink 1.4s infinite; }
+    .typing span:nth-child(2) { animation-delay: 0.2s; }
+    .typing span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes blink { 0%, 80%, 100% { opacity: 0.3; } 40% { opacity: 1; } }
+  </style>
+</head>
+<body>
+  <div class="chat-container">
+    <div class="header">ResolveOps Support</div>
+    <div class="messages" id="messages"></div>
+    <div class="input-area">
+      <input type="text" id="input" placeholder="Ask a question..." />
+      <button id="send-btn">Send</button>
+    </div>
+  </div>
+  <script>
+    (function () {
+      var params = new URLSearchParams(window.location.search);
+      var API_BASE = params.get("api_base") || window.location.origin;
+      var API_KEY = params.get("api_key") || "dev-widget-key";
+      var STORAGE_KEY = "resolveops_widget_session";
+      var messagesEl = document.getElementById("messages");
+      var inputEl = document.getElementById("input");
+      var sendBtn = document.getElementById("send-btn");
+
+      function getSession() { try { return JSON.parse(localStorage.getItem(STORAGE_KEY)); } catch { return null; } }
+      function saveSession(s) { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); }
+
+      function apiPost(path, body) {
+        return fetch(API_BASE + path, { method: "POST", headers: { "Content-Type": "application/json", "X-Widget-Key": API_KEY }, body: JSON.stringify(body) })
+          .then(function (r) { if (!r.ok) throw new Error("API error " + r.status); return r.json(); });
+      }
+
+      function addMsg(role, content, meta) {
+        var div = document.createElement("div");
+        div.className = "msg " + role;
+        div.textContent = content;
+        if (meta && meta.citations && meta.citations.length) {
+          var c = document.createElement("div"); c.className = "citations";
+          c.textContent = "Sources: " + meta.citations.join(", "); div.appendChild(c);
+        }
+        if (meta && meta.confidence !== undefined) {
+          var cf = document.createElement("div"); cf.className = "confidence";
+          cf.textContent = "Confidence: " + Math.round(meta.confidence * 100) + "%"; div.appendChild(cf);
+        }
+        messagesEl.appendChild(div); messagesEl.scrollTop = messagesEl.scrollHeight;
+      }
+      function addSystemMsg(c) { addMsg("system", c); }
+      function showTyping() {
+        var d = document.createElement("div"); d.className = "msg ai typing";
+        d.innerHTML = "<span></span><span></span><span></span>";
+        messagesEl.appendChild(d); messagesEl.scrollTop = messagesEl.scrollHeight; return d;
+      }
+
+      var session = getSession();
+      addSystemMsg("Welcome! How can we help you today?");
+      inputEl.focus();
+
+      function send() {
+        var text = inputEl.value.trim(); if (!text) return;
+        inputEl.value = ""; sendBtn.disabled = true;
+        addMsg("customer", text);
+        var typing = showTyping();
+        apiPost("/widget/chat", { message: text, conversation_id: session ? session.conversation_id : null, customer_email: session ? session.customer_email : null, customer_name: session ? session.customer_name : null })
+          .then(function (data) { messagesEl.removeChild(typing); addMsg("ai", data.answer, { citations: data.citations, confidence: data.confidence }); if (data.should_escalate) addSystemMsg("Escalating to a human support agent..."); saveSession({ conversation_id: data.conversation_id }); })
+          .catch(function () { messagesEl.removeChild(typing); addMsg("ai", "Sorry, something went wrong. Please try again."); })
+          .finally(function () { sendBtn.disabled = false; inputEl.focus(); });
+      }
+      sendBtn.addEventListener("click", send);
+      inputEl.addEventListener("keydown", function (e) { if (e.key === "Enter") send(); });
+    })();
+  </script>
+</body>
+</html>

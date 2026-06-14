@@ -21,6 +21,7 @@ from app.api.retention import router as retention_router
 from app.api.settings import router as settings_router
 from app.api.sla import router as sla_router
 from app.api.tickets import router as tickets_router
+from app.api.tools import router as tools_router
 from app.api.widget import router as widget_router
 from app.api.workspaces import router as workspaces_router
 
@@ -58,7 +59,10 @@ def create_app() -> FastAPI:
     application.include_router(prompts_router, prefix="/prompts", tags=["prompts"])
     application.include_router(jobs_router, prefix="/jobs", tags=["jobs"])
     application.include_router(widget_router, prefix="/widget", tags=["widget"])
-    application.include_router(conversations_router, prefix="/conversations", tags=["conversations"])
+    application.include_router(
+        conversations_router, prefix="/conversations", tags=["conversations"]
+    )
+    application.include_router(tools_router, prefix="/tools", tags=["tools"])
     return application
 
 

@@ -717,3 +717,56 @@ export interface ResolutionOutcomeResponse {
   human_message_count: number;
   created_at: string;
 }
+
+// ---------------- V7: Action-Taking Agent Workflows ----------------
+
+export interface ToolSummary {
+  id: string;
+  name: string;
+  slug: string;
+  description: string;
+  handler: string;
+  enabled: boolean;
+  category: string;
+  parameters_schema: Record<string, unknown>;
+  created_at: string;
+}
+
+export interface ToolListResponse {
+  items: ToolSummary[];
+  total: number;
+}
+
+export interface ToolExecutionResponse {
+  id: string;
+  tool_id: string;
+  tool_name: string;
+  input: Record<string, unknown>;
+  output: Record<string, unknown> | null;
+  status: string;
+  error: string | null;
+  latency_ms: number | null;
+  triggered_by: string;
+  created_at: string;
+}
+
+export interface ToolExecutionListResponse {
+  items: ToolExecutionResponse[];
+  total: number;
+}
+
+export interface ActionLogResponse {
+  id: string;
+  action_type: string;
+  resource_type: string;
+  resource_id: string | null;
+  tool_execution_id: string | null;
+  detail: string | null;
+  actor: string;
+  created_at: string;
+}
+
+export interface ActionLogListResponse {
+  items: ActionLogResponse[];
+  total: number;
+}

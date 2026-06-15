@@ -24,6 +24,7 @@ from app.api.sla import router as sla_router
 from app.api.tickets import router as tickets_router
 from app.api.tools import router as tools_router
 from app.api.widget import router as widget_router
+from app.api.workflow import router as workflow_router
 from app.api.workspaces import router as workspaces_router
 
 
@@ -66,6 +67,9 @@ def create_app() -> FastAPI:
     application.include_router(tools_router, prefix="/tools", tags=["tools"])
     application.include_router(
         intelligence_router, prefix="/intelligence", tags=["intelligence"]
+    )
+    application.include_router(
+        workflow_router, prefix="/workflow", tags=["workflow"]
     )
     return application
 

@@ -4,6 +4,8 @@ import type {
   BgJobListResponse,
   BgJobProcessResponse,
   BgJobResponse,
+  CannedResponse,
+  CannedResponseListResponse,
   ChartsResponse,
   ConnectorListResponse,
   ConnectorSummary,
@@ -27,6 +29,9 @@ import type {
   MemberListResponse,
   MemberResponse,
   PiiScanResponse,
+  PortalArticle,
+  PortalArticleListResponse,
+  PortalSearchResponse,
   PromptListResponse,
   PromptResponse,
   QualityByAreaResponse,
@@ -37,6 +42,8 @@ import type {
   RetentionPreviewResponse,
   RetentionRunResponse,
   RetrievalResponse,
+  RoutingRuleListResponse,
+  RoutingRuleResponse,
   RunDueResponse,
   SavedEvalQuestion,
   SettingsResponse,
@@ -645,4 +652,146 @@ export async function updateCopilotSuggestion(
 
 export async function getFeedbackSummary(): Promise<FeedbackSummaryResponse> {
   return request<FeedbackSummaryResponse>("/intelligence/feedback-summary", { headers: authHeaders() });
+}
+
+// ---------------- V9: Workflow Automation & Self-Service Portal ----------------
+
+export async function listRouting(): Promise<RoutingRuleListResponse> {
+  return request<RoutingRuleListResponse>("/workflow/routing", { headers: authHeaders() });
+}
+
+export async function createRouting(rule: {
+  name: string;
+  description?: string;
+  priority?: number;
+  conditions: Record<string, unknown>;
+  actions: Record<string, unknown>;
+}): Promise<RoutingRuleResponse> {
+  return request<RoutingRuleResponse>("/workflow/routing", {
+    method: "POST",
+    headers: authHeaders({ "Content-Type": "application/json" }),
+    body: JSON.stringify(rule),
+  });
+}
+
+export async function updateRouting(
+  ruleId: string,
+  update: { name?: string; description?: string; priority?: number; enabled?: boolean; conditions?: Record<string, unknown>; actions?: Record<string, unknown> },
+): Promise<RoutingRuleResponse> {
+  return request<RoutingRuleResponse>(`/workflow/routing/${ruleId}`, {
+    method: "PUT",
+    headers: authHeaders({ "Content-Type": "application/json" }),
+    body: JSON.stringify(update),
+  });
+}
+
+export async function deleteRouting(ruleId: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/workflow/routing/${ruleId}`, {
+    method: "DELETE",
+    headers: authHeaders(),
+  });
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`API error ${res.status}: ${body}`);
+  }
+}
+
+export async function listCannedResponses(category?: string): Promise<CannedResponseListResponse> {
+  const qs = category ? `?category=${encodeURIComponent(category)}` : "";
+  return request<CannedResponseListResponse>(`/workflow/canned-responses${qs}`, { headers: authHeaders() });
+}
+
+export async function createCannedResponse(resp: {
+  title: string;
+  content: string;
+  category?: string;
+  shortcut?: string;
+}): Promise<CannedResponse> {
+  return request<CannedResponse>("/workflow/canned-responses", {
+    method: "POST",
+    headers: authHeaders({ "Content-Type": "application/json" }),
+    body: JSON.stringify(resp),
+  });
+}
+
+export async function updateCannedResponse(
+  responseId: string,
+  update: { title?: string; content?: string; category?: string; shortcut?: string; enabled?: boolean },
+): Promise<CannedResponse> {
+  return request<CannedResponse>(`/workflow/canned-responses/${responseId}`, {
+    method: "PUT",
+    headers: authHeaders({ "Content-Type": "application/json" }),
+    body: JSON.stringify(update),
+  });
+}
+
+export async function deleteCannedResponse(responseId: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/workflow/canned-responses/${responseId}`, {
+    method: "DELETE",
+    headers: authHeaders(),
+  });
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`API error ${res.status}: ${body}`);
+  }
+}
+
+export async function incrementCannedResponseUsage(responseId: string): Promise<CannedResponse> {
+  return request<CannedResponse>(`/workflow/canned-responses/${responseId}/use`, {
+    method: "POST",
+    headers: authHeaders(),
+  });
+}
+
+export async function searchCannedResponses(q: string): Promise<CannedResponseListResponse> {
+  return request<CannedResponseListResponse>(`/workflow/canned-responses/search?q=${encodeURIComponent(q)}`, {
+    headers: authHeaders(),
+  });
+}
+
+export async function listPortalArticles(): Promise<PortalArticleListResponse> {
+  return request<PortalArticleListResponse>("/workflow/portal", { headers: authHeaders() });
+}
+
+export async function createPortalArticle(article: {
+  title: string;
+  content: string;
+  category?: string;
+  product_area?: string;
+  tags?: string[];
+  published?: boolean;
+}): Promise<PortalArticle> {
+  return request<PortalArticle>("/workflow/portal", {
+    method: "POST",
+    headers: authHeaders({ "Content-Type": "application/json" }),
+    body: JSON.stringify(article),
+  });
+}
+
+export async function updatePortalArticle(
+  articleId: string,
+  update: { title?: string; content?: string; category?: string; product_area?: string; tags?: string[]; published?: boolean },
+): Promise<PortalArticle> {
+  return request<PortalArticle>(`/workflow/portal/${articleId}`, {
+    method: "PUT",
+    headers: authHeaders({ "Content-Type": "application/json" }),
+    body: JSON.stringify(update),
+  });
+}
+
+export async function deletePortalArticle(articleId: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/workflow/portal/${articleId}`, {
+    method: "DELETE",
+    headers: authHeaders(),
+  });
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`API error ${res.status}: ${body}`);
+  }
+}
+
+export async function searchPortalArticles(q: string): Promise<PortalSearchResponse> {
+  return request<PortalSearchResponse>(`/workflow/portal/search?q=${encodeURIComponent(q)}`, {
+    headers: authHeaders(),
+  });
 }

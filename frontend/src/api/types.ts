@@ -770,3 +770,85 @@ export interface ActionLogListResponse {
   items: ActionLogResponse[];
   total: number;
 }
+
+// ---------------- V8: Agent Intelligence & Feedback Loop ----------------
+
+export interface ToolUsageStats {
+  tool_name: string;
+  slug: string;
+  total_executions: number;
+  success_count: number;
+  failure_count: number;
+  average_latency_ms: number;
+}
+
+export interface PerformanceMetricsResponse {
+  total_conversations: number;
+  resolved_conversations: number;
+  ai_contained: number;
+  human_escalated: number;
+  containment_rate: number;
+  average_resolution_time_seconds: number | null;
+  total_tool_executions: number;
+  tool_success_rate: number;
+  tool_usage: ToolUsageStats[];
+  sentiment_distribution: Record<string, number>;
+  top_escalation_reasons: Array<{ reason: string; count: number }>;
+}
+
+export interface KbSuggestionResponse {
+  id: string;
+  suggested_title: string;
+  suggested_content: string;
+  product_area: string | null;
+  issue_type: string | null;
+  source_conversation_ids: string[];
+  occurrence_count: number;
+  status: string;
+  created_at: string;
+}
+
+export interface KbSuggestionListResponse {
+  items: KbSuggestionResponse[];
+  total: number;
+}
+
+export interface CopilotSuggestionResponse {
+  id: string;
+  suggestion_type: string;
+  title: string;
+  content: string;
+  confidence: number;
+  status: string;
+  conversation_id: string | null;
+  created_at: string;
+}
+
+export interface CopilotSuggestionListResponse {
+  items: CopilotSuggestionResponse[];
+  total: number;
+}
+
+export interface ConversationSummaryResponse {
+  id: string;
+  conversation_id: string;
+  summary: string;
+  resolution_steps: string | null;
+  key_topics: string[];
+  sentiment_at_resolution: string | null;
+  created_at: string;
+}
+
+export interface ConversationSummaryListResponse {
+  items: ConversationSummaryResponse[];
+  total: number;
+}
+
+export interface FeedbackSummaryResponse {
+  total_feedback: number;
+  positive_count: number;
+  negative_count: number;
+  satisfaction_rate: number;
+  top_issues: Array<{ reason: string; count: number }>;
+  improvement_areas: string[];
+}

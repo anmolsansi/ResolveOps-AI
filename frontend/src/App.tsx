@@ -7,11 +7,13 @@ import AuditPage from "./pages/AuditPage";
 import ConnectorsPage from "./pages/ConnectorsPage";
 import ConversationDetailPage from "./pages/ConversationDetailPage";
 import ConversationsPage from "./pages/ConversationsPage";
+import CopilotPage from "./pages/CopilotPage";
 import CustomerProfilePage from "./pages/CustomerProfilePage";
 import CustomersPage from "./pages/CustomersPage";
 import DashboardPage from "./pages/DashboardPage";
 import EvalRunsPage from "./pages/EvalRunsPage";
 import HandoffsPage from "./pages/HandoffsPage";
+import IntelligencePage from "./pages/IntelligencePage";
 import JobsPage from "./pages/JobsPage";
 import KnowledgeBasePage from "./pages/KnowledgeBasePage";
 import PiiPage from "./pages/PiiPage";
@@ -52,6 +54,8 @@ export default function App() {
           <Route path="/tools" element={<ToolsPage />} />
           <Route path="/tools/:id" element={<ToolDetailPage />} />
           <Route path="/action-logs" element={<ActionLogsPage />} />
+          <Route path="/intelligence" element={<IntelligencePage />} />
+          <Route path="/copilot" element={<CopilotPage />} />
           <Route path="/widget" element={<WidgetHost />} />
           <Route path="/account" element={<AccountPage />} />
           <Route path="/workspaces" element={<WorkspacesPage />} />

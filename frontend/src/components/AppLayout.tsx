@@ -12,6 +12,8 @@ const NAV_ITEMS = [
   { to: "/handoffs", label: "Handoffs" },
   { to: "/tools", label: "Tools" },
   { to: "/action-logs", label: "Action Logs" },
+  { to: "/intelligence", label: "Intelligence" },
+  { to: "/copilot", label: "Copilot" },
   { to: "/connectors", label: "Connectors" },
   { to: "/kb", label: "Knowledge Base" },
   { to: "/sla", label: "SLA Risk" },

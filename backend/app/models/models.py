@@ -522,3 +522,65 @@ class ActionLog(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.now(), index=True
     )
+
+
+# ---------------------------------------------------------------------------
+# V8 — Agent Intelligence & Feedback Loop
+# ---------------------------------------------------------------------------
+
+
+class ConversationSummaryModel(Base):
+    __tablename__ = "conversation_summaries"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    conversation_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("conversations.id"), nullable=False, index=True
+    )
+    workspace_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("workspaces.id"), nullable=True, index=True
+    )
+    summary: Mapped[str] = mapped_column(Text, nullable=False)
+    resolution_steps: Mapped[str | None] = mapped_column(Text, nullable=True)
+    key_topics_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+    sentiment_at_resolution: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
+class KbSuggestion(Base):
+    __tablename__ = "kb_suggestions"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    workspace_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("workspaces.id"), nullable=True, index=True
+    )
+    suggested_title: Mapped[str] = mapped_column(String(500), nullable=False)
+    suggested_content: Mapped[str] = mapped_column(Text, nullable=False)
+    product_area: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    issue_type: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    source_conversation_ids_json: Mapped[str] = mapped_column(Text, nullable=False, default="[]")
+    occurrence_count: Mapped[int] = mapped_column(Integer, default=1)
+    # pending | accepted | dismissed
+    status: Mapped[str] = mapped_column(String(50), nullable=False, default="pending", index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
+class CopilotSuggestion(Base):
+    __tablename__ = "copilot_suggestions"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    workspace_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("workspaces.id"), nullable=True, index=True
+    )
+    conversation_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("conversations.id"), nullable=True
+    )
+    # next_best_action | related_ticket | canned_response | escalation_tip
+    suggestion_type: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
+    title: Mapped[str] = mapped_column(String(500), nullable=False)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    confidence: Mapped[float] = mapped_column(Float, default=0.0)
+    # pending | accepted | dismissed
+    status: Mapped[str] = mapped_column(String(50), nullable=False, default="pending")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now(), index=True
+    )

@@ -11,6 +11,7 @@ from app.api.conversations import router as conversations_router
 from app.api.dashboard import router as dashboard_router
 from app.api.eval import router as eval_router
 from app.api.health import router as health_router
+from app.api.intelligence import router as intelligence_router
 from app.api.jobs import router as jobs_router
 from app.api.kb import router as kb_router
 from app.api.pii import router as pii_router
@@ -63,6 +64,9 @@ def create_app() -> FastAPI:
         conversations_router, prefix="/conversations", tags=["conversations"]
     )
     application.include_router(tools_router, prefix="/tools", tags=["tools"])
+    application.include_router(
+        intelligence_router, prefix="/intelligence", tags=["intelligence"]
+    )
     return application
 
 

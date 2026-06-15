@@ -581,3 +581,68 @@ export async function listToolExecutions(): Promise<ToolExecutionListResponse> {
 export async function listActionLogs(): Promise<ActionLogListResponse> {
   return request<ActionLogListResponse>("/tools/action-logs", { headers: authHeaders() });
 }
+
+// ---------------- V8: Agent Intelligence & Feedback Loop ----------------
+
+export async function getPerformanceMetrics(): Promise<PerformanceMetricsResponse> {
+  return request<PerformanceMetricsResponse>("/intelligence/performance", { headers: authHeaders() });
+}
+
+export async function listSummaries(): Promise<ConversationSummaryListResponse> {
+  return request<ConversationSummaryListResponse>("/intelligence/summaries", { headers: authHeaders() });
+}
+
+export async function generateSummary(conversationId: string): Promise<ConversationSummaryResponse> {
+  return request<ConversationSummaryResponse>(
+    `/intelligence/summaries/${encodeURIComponent(conversationId)}/generate`,
+    { method: "POST", headers: authHeaders() },
+  );
+}
+
+export async function listKbSuggestions(): Promise<KbSuggestionListResponse> {
+  return request<KbSuggestionListResponse>("/intelligence/kb-suggestions", { headers: authHeaders() });
+}
+
+export async function detectKbSuggestions(): Promise<KbSuggestionListResponse> {
+  return request<KbSuggestionListResponse>("/intelligence/kb-suggestions/detect", {
+    method: "POST",
+    headers: authHeaders(),
+  });
+}
+
+export async function updateKbSuggestion(
+  id: string,
+  status: string,
+): Promise<KbSuggestionResponse> {
+  return request<KbSuggestionResponse>(`/intelligence/kb-suggestions/${encodeURIComponent(id)}`, {
+    method: "PUT",
+    headers: authHeaders({ "Content-Type": "application/json" }),
+    body: JSON.stringify({ status }),
+  });
+}
+
+export async function listCopilotSuggestions(): Promise<CopilotSuggestionListResponse> {
+  return request<CopilotSuggestionListResponse>("/intelligence/copilot", { headers: authHeaders() });
+}
+
+export async function generateCopilotSuggestions(): Promise<CopilotSuggestionListResponse> {
+  return request<CopilotSuggestionListResponse>("/intelligence/copilot/generate", {
+    method: "POST",
+    headers: authHeaders(),
+  });
+}
+
+export async function updateCopilotSuggestion(
+  id: string,
+  status: string,
+): Promise<CopilotSuggestionResponse> {
+  return request<CopilotSuggestionResponse>(`/intelligence/copilot/${encodeURIComponent(id)}`, {
+    method: "PUT",
+    headers: authHeaders({ "Content-Type": "application/json" }),
+    body: JSON.stringify({ status }),
+  });
+}
+
+export async function getFeedbackSummary(): Promise<FeedbackSummaryResponse> {
+  return request<FeedbackSummaryResponse>("/intelligence/feedback-summary", { headers: authHeaders() });
+}

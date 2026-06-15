@@ -852,3 +852,73 @@ export interface FeedbackSummaryResponse {
   top_issues: Array<{ reason: string; count: number }>;
   improvement_areas: string[];
 }
+
+// ---------------- V9: Workflow Automation & Self-Service Portal ----------------
+
+export interface RoutingRuleResponse {
+  id: string;
+  name: string;
+  description: string;
+  priority: number;
+  enabled: boolean;
+  conditions: Record<string, unknown>;
+  actions: Record<string, unknown>;
+  created_at: string;
+  updated_at: string | null;
+}
+
+export interface RoutingRuleListResponse {
+  items: RoutingRuleResponse[];
+  total: number;
+}
+
+export interface CannedResponse {
+  id: string;
+  title: string;
+  content: string;
+  category: string | null;
+  shortcut: string | null;
+  enabled: boolean;
+  usage_count: number;
+  created_at: string;
+}
+
+export interface CannedResponseListResponse {
+  items: CannedResponse[];
+  total: number;
+}
+
+export interface PortalArticle {
+  id: string;
+  title: string;
+  slug: string;
+  content: string;
+  category: string | null;
+  product_area: string | null;
+  tags: string[];
+  published: boolean;
+  view_count: number;
+  helpful_count: number;
+  created_at: string;
+  updated_at: string | null;
+}
+
+export interface PortalArticleListResponse {
+  items: PortalArticle[];
+  total: number;
+}
+
+export interface PortalSearchResult {
+  id: string;
+  title: string;
+  slug: string;
+  content: string;
+  category: string | null;
+  tags: string[];
+  view_count: number;
+}
+
+export interface PortalSearchResponse {
+  items: PortalSearchResult[];
+  total: number;
+}

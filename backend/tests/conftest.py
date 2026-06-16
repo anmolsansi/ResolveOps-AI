@@ -1,3 +1,5 @@
+import os
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
@@ -5,6 +7,8 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from app.core.database import Base, get_db
 from app.main import app
+
+os.environ["TESTING"] = "1"
 
 TEST_DATABASE_URL = "sqlite:///./test.db"
 

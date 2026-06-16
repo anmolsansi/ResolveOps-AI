@@ -653,3 +653,116 @@ class PortalArticle(Base):
     __table_args__ = (
         Index("ix_portal_articles_workspace_slug", "workspace_id", "slug", unique=True),
     )
+
+
+# V10a — Analytics & Reporting
+
+
+class SavedReport(Base):
+    __tablename__ = "saved_reports"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    workspace_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("workspaces.id"), nullable=True, index=True,
+    )
+    name: Mapped[str] = mapped_column(String(300), nullable=False)
+    report_type: Mapped[str] = mapped_column(String(50), nullable=False)
+    filters_json: Mapped[str] = mapped_column(Text, nullable=False, default="{}")
+    created_by: Mapped[str] = mapped_column(String(200), nullable=False, default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
+class ExportJob(Base):
+    __tablename__ = "export_jobs"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    workspace_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("workspaces.id"), nullable=True, index=True,
+    )
+    report_type: Mapped[str] = mapped_column(String(50), nullable=False)
+    filters_json: Mapped[str] = mapped_column(Text, nullable=False, default="{}")
+    status: Mapped[str] = mapped_column(String(20), default="pending")
+    file_path: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    row_count: Mapped[int] = mapped_column(Integer, default=0)
+    created_by: Mapped[str] = mapped_column(String(200), nullable=False, default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+
+# V10a — Advanced Security
+
+
+class ApiKey(Base):
+    __tablename__ = "api_keys"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    workspace_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("workspaces.id"), nullable=True, index=True,
+    )
+    user_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=True, index=True,
+    )
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    key_prefix: Mapped[str] = mapped_column(String(20), nullable=False, index=True)
+    key_hash: Mapped[str] = mapped_column(String(200), nullable=False, index=True)
+    scopes_json: Mapped[str] = mapped_column(Text, nullable=False, default="[]")
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    last_used_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
+class LoginAttempt(Base):
+    __tablename__ = "login_attempts"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    email: Mapped[str] = mapped_column(String(200), nullable=False, index=True)
+    ip_address: Mapped[str] = mapped_column(String(50), nullable=False, default="")
+    success: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
+class IpAllowlist(Base):
+    __tablename__ = "ip_allowlist"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    workspace_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("workspaces.id"), nullable=True, index=True,
+    )
+    ip_address: Mapped[str] = mapped_column(String(50), nullable=False)
+    note: Mapped[str] = mapped_column(String(300), default="")
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_by: Mapped[str] = mapped_column(String(200), nullable=False, default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+    __table_args__ = (
+        Index("ix_ip_allowlist_workspace_ip", "workspace_id", "ip_address", unique=True),
+    )
+
+
+class SecuritySetting(Base):
+    __tablename__ = "security_settings"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    workspace_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("workspaces.id"), nullable=True, index=True, unique=True,
+    )
+    rate_limit_requests_per_minute: Mapped[int] = mapped_column(Integer, default=60)
+    rate_limit_burst: Mapped[int] = mapped_column(Integer, default=10)
+    max_login_attempts: Mapped[int] = mapped_column(Integer, default=5)
+    lockout_duration_minutes: Mapped[int] = mapped_column(Integer, default=15)
+    session_timeout_minutes: Mapped[int] = mapped_column(Integer, default=480)
+    ip_allowlist_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now(), onupdate=func.now(),
+    )
+
+
+class RateLimitLog(Base):
+    __tablename__ = "rate_limit_logs"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    key: Mapped[str] = mapped_column(String(200), nullable=False, index=True)
+    endpoint: Mapped[str] = mapped_column(String(200), default="")
+    timestamp: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), index=True)

@@ -26,6 +26,10 @@ from app.api.tools import router as tools_router
 from app.api.widget import router as widget_router
 from app.api.workflow import router as workflow_router
 from app.api.workspaces import router as workspaces_router
+from app.api.analytics import router as analytics_router
+from app.api.security_admin import router as security_admin_router
+from app.middleware.rate_limit import RateLimitMiddleware
+from app.middleware.ip_allowlist import IpAllowlistMiddleware
 
 
 def _cors_origins() -> list[str]:
@@ -71,6 +75,14 @@ def create_app() -> FastAPI:
     application.include_router(
         workflow_router, prefix="/workflow", tags=["workflow"]
     )
+    application.include_router(
+        analytics_router, prefix="/analytics", tags=["analytics"]
+    )
+    application.include_router(
+        security_admin_router, prefix="/security", tags=["security"]
+    )
+    application.add_middleware(IpAllowlistMiddleware)
+    application.add_middleware(RateLimitMiddleware)
     return application
 
 

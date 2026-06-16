@@ -1,4 +1,7 @@
 import type {
+  AgentPerformanceResponse,
+  ApiKeyCreateResponse,
+  ApiKeyListResponse,
   AssistResponse,
   AuditListResponse,
   BgJobListResponse,
@@ -14,18 +17,24 @@ import type {
   CostResponse,
   CustomerListResponse,
   CustomerProfileDetailResponse,
+  DashboardSummary,
   DuplicatesResponse,
   EvalCompareResponse,
   EvalConfig,
   EvalRunSummary,
+  ExportJob,
+  ExportJobListResponse,
   FailedQueriesResponse,
   FeedbackResponse,
   FeedbackValue,
   HandoffListResponse,
+  IpAllowlistEntry,
+  IpAllowlistResponse,
   JobListResponse,
   JobSummary,
   KbGenerateResponse,
   KbListResponse,
+  LoginAttemptListResponse,
   MemberListResponse,
   MemberResponse,
   PiiScanResponse,
@@ -46,6 +55,9 @@ import type {
   RoutingRuleResponse,
   RunDueResponse,
   SavedEvalQuestion,
+  SavedReport,
+  SavedReportListResponse,
+  SecuritySettings,
   SettingsResponse,
   SettingsUpdate,
   SlaRisksResponse,
@@ -794,4 +806,160 @@ export async function searchPortalArticles(q: string): Promise<PortalSearchRespo
   return request<PortalSearchResponse>(`/workflow/portal/search?q=${encodeURIComponent(q)}`, {
     headers: authHeaders(),
   });
+}
+
+// ---------------- V10a: Analytics & Reporting + Advanced Security ----------------
+
+export async function getDashboardSummary(
+  timeRange: string = "all",
+): Promise<DashboardSummary> {
+  return request<DashboardSummary>(
+    `/analytics/dashboard?time_range=${encodeURIComponent(timeRange)}`,
+    { headers: authHeaders() },
+  );
+}
+
+export async function getAgentPerformance(
+  timeRange: string = "all",
+): Promise<AgentPerformanceResponse> {
+  return request<AgentPerformanceResponse>(
+    `/analytics/agent-performance?time_range=${encodeURIComponent(timeRange)}`,
+    { headers: authHeaders() },
+  );
+}
+
+export async function createSavedReport(report: {
+  name: string;
+  report_type: string;
+  filters?: Record<string, unknown>;
+}): Promise<SavedReport> {
+  return request<SavedReport>("/analytics/reports", {
+    method: "POST",
+    headers: authHeaders({ "Content-Type": "application/json" }),
+    body: JSON.stringify(report),
+  });
+}
+
+export async function listSavedReports(): Promise<SavedReportListResponse> {
+  return request<SavedReportListResponse>("/analytics/reports", {
+    headers: authHeaders(),
+  });
+}
+
+export async function deleteSavedReport(reportId: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/analytics/reports/${reportId}`, {
+    method: "DELETE",
+    headers: authHeaders(),
+  });
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`API error ${res.status}: ${body}`);
+  }
+}
+
+export async function createExportJob(job: {
+  report_type: string;
+  filters?: Record<string, unknown>;
+}): Promise<ExportJob> {
+  return request<ExportJob>("/analytics/export", {
+    method: "POST",
+    headers: authHeaders({ "Content-Type": "application/json" }),
+    body: JSON.stringify(job),
+  });
+}
+
+export async function listExportJobs(): Promise<ExportJobListResponse> {
+  return request<ExportJobListResponse>("/analytics/exports", {
+    headers: authHeaders(),
+  });
+}
+
+export async function downloadExport(jobId: string): Promise<Blob> {
+  const res = await fetch(`${API_BASE}/analytics/exports/${jobId}/download`, {
+    headers: authHeaders(),
+  });
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`API error ${res.status}: ${body}`);
+  }
+  return res.blob();
+}
+
+export async function listApiKeys(): Promise<ApiKeyListResponse> {
+  return request<ApiKeyListResponse>("/security/api-keys", {
+    headers: authHeaders(),
+  });
+}
+
+export async function createApiKey(key: {
+  name: string;
+  scopes?: string[];
+  expires_days?: number;
+}): Promise<ApiKeyCreateResponse> {
+  return request<ApiKeyCreateResponse>("/security/api-keys", {
+    method: "POST",
+    headers: authHeaders({ "Content-Type": "application/json" }),
+    body: JSON.stringify(key),
+  });
+}
+
+export async function revokeApiKey(keyId: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/security/api-keys/${keyId}`, {
+    method: "DELETE",
+    headers: authHeaders(),
+  });
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`API error ${res.status}: ${body}`);
+  }
+}
+
+export async function getSecuritySettings(): Promise<SecuritySettings> {
+  return request<SecuritySettings>("/security/settings", {
+    headers: authHeaders(),
+  });
+}
+
+export async function updateSecuritySettings(
+  update: Partial<SecuritySettings>,
+): Promise<SecuritySettings> {
+  return request<SecuritySettings>("/security/settings", {
+    method: "PUT",
+    headers: authHeaders({ "Content-Type": "application/json" }),
+    body: JSON.stringify(update),
+  });
+}
+
+export async function listLoginAttempts(): Promise<LoginAttemptListResponse> {
+  return request<LoginAttemptListResponse>("/security/login-attempts", {
+    headers: authHeaders(),
+  });
+}
+
+export async function listIpAllowlist(): Promise<IpAllowlistResponse> {
+  return request<IpAllowlistResponse>("/security/ip-allowlist", {
+    headers: authHeaders(),
+  });
+}
+
+export async function addIpAllowlist(entry: {
+  ip_address: string;
+  note?: string;
+}): Promise<IpAllowlistEntry> {
+  return request<IpAllowlistEntry>("/security/ip-allowlist", {
+    method: "POST",
+    headers: authHeaders({ "Content-Type": "application/json" }),
+    body: JSON.stringify(entry),
+  });
+}
+
+export async function removeIpAllowlist(entryId: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/security/ip-allowlist/${entryId}`, {
+    method: "DELETE",
+    headers: authHeaders(),
+  });
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`API error ${res.status}: ${body}`);
+  }
 }

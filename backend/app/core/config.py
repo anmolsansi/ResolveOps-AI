@@ -39,6 +39,14 @@ class Settings(BaseSettings):
     tool_auto_register: bool = True
     tool_max_executions_per_conversation: int = 5
 
+    # V10a — security & analytics
+    rate_limit_requests_per_minute: int = 60
+    rate_limit_burst: int = 10
+    max_login_attempts: int = 5
+    lockout_duration_minutes: int = 15
+    session_timeout_minutes: int = 480
+    ip_allowlist_enabled: bool = False
+
     model_config = {"env_file": ".env", "extra": "ignore"}
 
 

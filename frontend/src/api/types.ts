@@ -922,3 +922,125 @@ export interface PortalSearchResponse {
   items: PortalSearchResult[];
   total: number;
 }
+
+// ---------------- V10a: Analytics & Reporting + Advanced Security ----------------
+
+export interface TrendPoint {
+  label: string;
+  value: number;
+}
+
+export interface DashboardSummary {
+  total_conversations: number;
+  resolved_conversations: number;
+  open_conversations: number;
+  containment_rate: number;
+  avg_resolution_time_seconds: number | null;
+  avg_satisfaction: number | null;
+  total_rag_queries: number;
+  avg_confidence: number;
+  total_tool_executions: number;
+  tool_success_rate: number;
+  sla_breach_count: number;
+  trend: TrendPoint[];
+}
+
+export interface AgentPerformanceItem {
+  user_id: string;
+  email: string;
+  conversations_handled: number;
+  resolutions: number;
+  avg_resolution_time_seconds: number | null;
+  avg_satisfaction: number | null;
+}
+
+export interface AgentPerformanceResponse {
+  items: AgentPerformanceItem[];
+  total: number;
+}
+
+export interface SavedReport {
+  id: string;
+  name: string;
+  report_type: string;
+  filters: Record<string, unknown>;
+  created_by: string;
+  created_at: string;
+}
+
+export interface SavedReportListResponse {
+  items: SavedReport[];
+  total: number;
+}
+
+export interface ExportJob {
+  id: string;
+  report_type: string;
+  filters: Record<string, unknown>;
+  status: string;
+  row_count: number;
+  created_by: string;
+  created_at: string;
+  completed_at: string | null;
+}
+
+export interface ExportJobListResponse {
+  items: ExportJob[];
+  total: number;
+}
+
+export interface ApiKey {
+  id: string;
+  name: string;
+  key_prefix: string;
+  scopes: string[];
+  enabled: boolean;
+  last_used_at: string | null;
+  expires_at: string | null;
+  created_at: string;
+}
+
+export interface ApiKeyCreateResponse extends ApiKey {
+  raw_key: string;
+}
+
+export interface ApiKeyListResponse {
+  items: ApiKey[];
+  total: number;
+}
+
+export interface SecuritySettings {
+  rate_limit_requests_per_minute: number;
+  rate_limit_burst: number;
+  max_login_attempts: number;
+  lockout_duration_minutes: number;
+  session_timeout_minutes: number;
+  ip_allowlist_enabled: boolean;
+}
+
+export interface LoginAttempt {
+  id: string;
+  email: string;
+  ip_address: string;
+  success: boolean;
+  created_at: string;
+}
+
+export interface LoginAttemptListResponse {
+  items: LoginAttempt[];
+  total: number;
+}
+
+export interface IpAllowlistEntry {
+  id: string;
+  ip_address: string;
+  note: string;
+  enabled: boolean;
+  created_by: string;
+  created_at: string;
+}
+
+export interface IpAllowlistResponse {
+  items: IpAllowlistEntry[];
+  total: number;
+}

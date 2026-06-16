@@ -32,6 +32,9 @@ import WorkspacesPage from "./pages/WorkspacesPage";
 import RoutingPage from "./pages/RoutingPage";
 import CannedResponsesPage from "./pages/CannedResponsesPage";
 import PortalPage from "./pages/PortalPage";
+import AnalyticsPage from "./pages/AnalyticsPage";
+import ReportsPage from "./pages/ReportsPage";
+import SecurityPage from "./pages/SecurityPage";
 
 export default function App() {
   return (
@@ -62,6 +65,9 @@ export default function App() {
           <Route path="/routing" element={<RoutingPage />} />
           <Route path="/canned-responses" element={<CannedResponsesPage />} />
           <Route path="/portal" element={<PortalPage />} />
+          <Route path="/analytics" element={<AnalyticsPage />} />
+          <Route path="/reports" element={<ReportsPage />} />
+          <Route path="/security" element={<SecurityPage />} />
           <Route path="/widget" element={<WidgetHost />} />
           <Route path="/account" element={<AccountPage />} />
           <Route path="/workspaces" element={<WorkspacesPage />} />

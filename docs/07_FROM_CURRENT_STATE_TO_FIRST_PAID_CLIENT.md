@@ -2,887 +2,542 @@
 
 ## Purpose of this document
 
-This is the execution plan for turning ResolveOps AI from a strong project into a product/service that can begin earning recurring revenue.
+This document is the commercial execution plan for moving ResolveOps AI from its current repository state to a **fully completed, clearly defined product package that can be sold to a client at full value**.
 
-It is deliberately practical.
+This is not a plan for charging a customer while part of the promised product is still unfinished.
 
-It does **not** assume that publishing documentation to GitHub magically makes the product sellable.
+The governing rule is:
 
-It also does **not** assume that every future feature must be finished before asking a customer to pay.
+> **If the paid package promises ten capabilities, all ten must be complete before we sell that package as complete. We do not deliver eight and reduce the price because two are missing.**
 
-The goal is to answer:
+At the same time, “complete” must have a clear boundary. ResolveOps does not need every feature that may ever exist on the long-term roadmap before earning revenue.
 
-1. What can we sell now?
-2. What must be fixed before real production use?
-3. Who should the first client be?
-4. What should the first paid offer include?
-5. What should we charge?
-6. How should onboarding work?
-7. How should we prove value?
-8. How do we turn one pilot into regular monthly income?
+The fastest defensible path is:
 
-There is no honest way to guarantee immediate revenue. A sale depends on finding a customer with a real problem and earning their trust. This plan is designed to make that process as fast and credible as possible.
+1. choose the smallest package that completely solves a valuable customer problem;
+2. freeze the exact capabilities inside that package;
+3. compare the package against the current repository;
+4. finish every missing or insufficient capability inside the package;
+5. test the entire package as one real user journey;
+6. deploy and operate it properly;
+7. demonstrate the exact version the client will receive;
+8. then charge for the complete package.
+
+A smaller complete product is acceptable.
+
+A larger incomplete promised product is not.
 
 ---
 
 # 1. The commercial strategy in one sentence
 
-> **Sell ResolveOps first as a managed AI support-intelligence pilot that works alongside the client’s existing support process, prove measurable value, then expand into recurring automation.**
+> **Finish a narrow but genuinely useful ResolveOps support-intelligence product completely, prove it end to end, and then sell the completed package at full value.**
 
-Do not begin by selling:
+We are not going to use this model:
 
-> “Replace your entire helpdesk with autonomous AI.”
+> “Most of the system works, so pay for the percentage that is finished.”
 
-That promise is unnecessarily risky and creates more objections than needed.
+We are going to use this model:
 
----
-
-# 2. What can be sold immediately versus what can be deployed immediately
-
-These are different questions.
-
-## Can we start selling today?
-
-Yes.
-
-We can start selling:
-
-- discovery;
-- support-workflow analysis;
-- historical-ticket intelligence setup;
-- controlled ResolveOps pilot;
-- AI answer-quality evaluation;
-- support knowledge-gap analysis;
-- internal agent-assist deployment.
-
-These can be sold before every enterprise feature is complete because the engagement itself includes configuration, testing, and hardening.
-
-## Can we put an unknown client’s production data into ResolveOps today and promise mission-critical operation?
-
-Not responsibly without completing the P0 controls in the gap analysis.
-
-The distinction lets us begin commercial conversations now without overselling the current product.
+> “These are the exact capabilities ResolveOps includes. Every one of them is implemented, tested, documented, deployed, and supported. This is the price for the complete package.”
 
 ---
 
-# 3. The first offer
+# 2. What “complete” means
 
-## Offer name
+A feature is not commercially complete merely because code exists.
 
-**ResolveOps AI Support Intelligence Pilot**
+For a paying client, a feature is complete only when the following are true:
+
+- the normal user flow works;
+- the failure flow works safely;
+- permissions are correct;
+- client data remains separated;
+- sensitive information is handled appropriately;
+- important automated tests pass;
+- the real end-to-end workflow has been tested;
+- production failures can be detected;
+- documentation exists;
+- support ownership is defined.
+
+An **end-to-end test** means testing the complete journey as a real user would experience it rather than testing only one isolated function.
+
+Only after these conditions are satisfied should we count the capability as commercially complete.
+
+---
+
+# 3. The first complete commercial package
+
+The first product should not attempt to replace Zendesk, Intercom, every messaging channel, a voice contact center, a billing system, and a complete customer-service organization at the same time.
+
+That would make “complete” unnecessarily distant.
+
+The recommended first product is:
+
+# ResolveOps AI Support Intelligence and Agent Assistance
 
 ## Plain-English promise
 
-> “We will use your historical support conversations to build an evidence-backed support assistant for your team. Your agents can search past solutions, get suggested responses with sources, see failed AI questions, and identify missing knowledge. We will test the system on your real questions before exposing it to customers and measure whether it saves your team time.”
+> ResolveOps helps a support team use approved historical support knowledge to find answers faster, draft responses backed by evidence, understand customer and conversation history, escalate uncertain cases to humans, and give managers clear information about AI quality and support performance.
 
-This promise matches the strongest current parts of the product.
+This is already close to what the repository does well.
 
----
-
-# 4. What the first paid pilot includes
-
-## 4.1 Support workflow discovery
-
-We interview the support lead and document:
-
-- ticket volume;
-- top issue categories;
-- escalation rules;
-- current support tools;
-- current knowledge sources;
-- repetitive tasks;
-- current response/resolution time;
-- sensitive or prohibited use cases.
-
-## 4.2 Historical-data onboarding
-
-Import a controlled support dataset.
-
-Initially, this can be CSV-based if a live connector is not ready.
-
-Deliver:
-
-- import summary;
-- rejected-row report;
-- duplicate report;
-- PII/redaction report where applicable.
-
-## 4.3 Workspace setup
-
-Create isolated client workspace and users.
-
-## 4.4 Internal support search
-
-Agents can ask questions against historical support knowledge and receive cited results.
-
-## 4.5 Suggested response mode
-
-AI drafts replies for human review.
-
-## 4.6 Quality dashboard
-
-Track:
-
-- confidence;
-- failed queries;
-- citations;
-- quality scores;
-- latency;
-- cost.
-
-## 4.7 Client evaluation set
-
-Create 25–100 important client questions with expected outcomes.
-
-## 4.8 Knowledge-gap report
-
-Identify questions where the source material is weak or missing.
-
-## 4.9 Weekly review
-
-Review failures and improvements with the client.
-
-## 4.10 Optional limited widget
-
-Only after internal quality is acceptable, turn on customer-facing chat for a narrow category or audience.
+The commercial work is therefore primarily about closing the remaining reliability, usability, deployment, security, testing, and operating gaps around this specific package.
 
 ---
 
-# 5. What the first pilot explicitly excludes
+# 4. The ten required capabilities of the first paid package
 
-Write these exclusions into the proposal.
+If we advertise these ten capabilities, all ten must be complete before charging for this package.
 
-- No promise of fully autonomous support.
-- No automatic high-value refunds.
-- No irreversible account changes.
-- No medical/legal/financial decision automation.
-- No unlimited volume.
-- No guaranteed enterprise uptime unless an SLA has been specifically designed and supported.
-- No unbuilt vendor integration presented as complete.
-- No claim of zero hallucinations.
-- No claim of regulatory compliance without separate review.
+## Capability 1 — Secure user accounts and permissions
 
-A clear exclusion list prevents the client from assuming capabilities we did not sell.
+Users must be able to sign in securely, and the system must enforce appropriate roles and administrator controls.
 
----
+The repository already contains authentication and role-based access controls. Before commercial launch, the deployed environment must prove that these controls work correctly.
 
-# 6. Ideal first client profile
+**Role-based access control** means a user’s permissions depend on their role, such as administrator, member, or viewer.
 
-The best first client has enough pain to care but not enough bureaucracy to slow the pilot for months.
+## Capability 2 — Client workspace and data separation
 
-## Recommended profile
+Each client must have an isolated workspace. One client’s data must not appear in another client’s search, AI answers, conversations, analytics, reports, or exports.
 
-- B2B SaaS or technology company;
-- 5–30 support agents;
-- at least several hundred historical tickets;
-- recurring product/support questions;
-- support manager available directly;
-- current helpdesk exports data easily;
-- no extremely sensitive regulated decision-making in pilot scope;
-- open to human-reviewed AI;
-- willing to be a design partner.
+The repository already has workspace scoping. Before sale, explicit multi-workspace end-to-end tests must prove isolation.
 
-## Avoid as the first client
+## Capability 3 — A production-supported historical data import path
 
-- large bank;
-- hospital using protected patient data;
-- government critical system;
-- Fortune 100 enterprise requiring long procurement/security review;
-- company demanding 99.99% uptime immediately;
-- company demanding every connector/channel before pilot;
-- company wanting fully autonomous refunds from day one.
+A client must be able to bring approved support knowledge into ResolveOps reliably.
 
-These can become future markets after proof and hardening.
+For the first product, this does not have to mean every helpdesk connector. A hardened CSV import can be the supported first import method if the commercial package says exactly that.
 
----
+The import must handle required fields, invalid rows, duplicates, realistic datasets, failure reporting, sensitive information, and repeated imports.
 
-# 7. Where to find the first client
+If a first client requires live Zendesk synchronization and we promise it, Zendesk becomes part of that client’s commercial package and must be completed before charging that client.
 
-The first sale should focus on warm or high-context outreach rather than broad advertising.
+We do not call a mock Zendesk connector a completed Zendesk feature.
 
-Potential sources:
+## Capability 4 — Evidence-backed support search
 
-- founder network;
-- LinkedIn support leaders;
-- SaaS founders;
-- YC/startup communities;
-- companies hiring several support agents;
-- companies with a large public help center;
-- companies posting complaints about support backlog;
-- former coworkers or engineering contacts who can introduce support leaders.
+Support users must be able to ask a question and retrieve relevant information from approved support knowledge.
 
-The prospecting message should focus on a measurable support pain, not on AI jargon.
+ResolveOps already contains semantic search and retrieval.
 
-Bad outreach:
+**Semantic search** means searching by meaning rather than only by exact matching words.
 
-> “We built an agentic RAG platform with pgvector and autonomous tool execution.”
+Before commercial launch, this must be tested on realistic support data rather than only deterministic sample data.
 
-Better outreach:
+## Capability 5 — AI answer drafts with clear citations
 
-> “I’m working on a support-intelligence product that helps agents find answers from old tickets and drafts cited responses. I’m looking for one or two support teams willing to test whether it can reduce time spent searching historical cases. I can set up a controlled pilot using a support-ticket export without replacing your existing helpdesk.”
+ResolveOps must produce useful support answer drafts and show the sources behind them.
 
----
+A **citation** is a reference to the information supporting the answer.
 
-# 8. Discovery call structure
+The actual production AI provider and model must be configured and validated. The mock AI provider is useful for testing code, but a paying customer cannot be sold a “real AI assistant” if only mock behavior has been proven.
 
-## First 5 minutes — Understand the operation
+## Capability 6 — Safe uncertainty and failure behavior
 
-Ask:
+ResolveOps must have clear behavior for weak evidence, conflicting evidence, missing knowledge, AI provider failure, invalid input, and unsupported requests.
 
-- How big is the support team?
-- How many conversations per month?
-- What helpdesk do you use?
-- What takes agents the most time?
+When the system does not know enough, safe behavior is part of the product.
 
-## Next 10 minutes — Find one painful use case
+## Capability 7 — Customer and conversation context
 
-Ask:
+Support users should be able to see the relevant conversation history and customer context stored in ResolveOps.
 
-- Which questions repeat most often?
-- What requires senior-agent knowledge?
-- Where do agents search for answers?
-- What makes customers wait?
+Before launch, validate customer matching, conversation history, workspace separation, empty states, duplicate-customer behavior, and sensitive-information display.
 
-## Next 10 minutes — Quantify the pain
+## Capability 8 — Human escalation without losing context
 
-Example:
+The human-handoff flow must preserve the conversation, customer context, AI attempts, supporting information, and reason for escalation.
 
-If 10 agents each spend 30 minutes/day searching old cases:
+A human support agent should not have to ask the customer to restart the entire story.
 
-```text
-10 agents x 0.5 hours/day = 5 hours/day
-5 hours x ~20 working days = 100 hours/month
-```
+## Capability 9 — Reliability and manager visibility
 
-Even reducing that by 30% creates 30 hours/month of recovered time.
+Managers need to know whether ResolveOps is helping or creating new problems.
 
-Do not invent the client’s numbers. Ask them.
+The package should provide clear information about failed AI questions, answer quality, citations, response time, usage, handoffs, resolution behavior, and relevant costs.
 
-## Final 10 minutes — Offer the pilot
+Every advertised metric must be verified against realistic data and explained in plain language.
 
-Explain:
+## Capability 10 — Production operating foundation
 
-- controlled data import;
-- internal-only start;
-- cited answers;
-- human-reviewed drafts;
-- measured results;
-- optional expansion.
+Before charging a client, the sold release needs repeatable deployment, HTTPS, secure environment configuration, database migration proof, monitoring, error visibility, backups, a tested restore procedure, incident-response instructions, rollback instructions, critical end-to-end tests, security tests, onboarding documentation, administrator instructions, and support ownership.
+
+This tenth capability is what converts “software that exists” into “software we can responsibly operate for a paying customer.”
 
 ---
 
-# 9. Pricing strategy
+# 5. What is deliberately outside the first package
 
-Pricing should be simple enough for a small company to approve but high enough to cover real work.
+The following items should not block the first sale unless we intentionally include them in the product promise:
 
-The first few customers are not buying only software. They are buying:
+- live Zendesk integration;
+- live Freshdesk integration;
+- live Intercom integration;
+- voice support;
+- WhatsApp;
+- SMS;
+- every social channel;
+- fully autonomous refunds;
+- fully autonomous cancellations;
+- irreversible customer-account changes;
+- public MCP server;
+- full developer SDK;
+- enterprise SSO;
+- advanced workforce management;
+- sophisticated product-intelligence mining;
+- complex subscription billing;
+- integration marketplace.
 
-- implementation;
-- data mapping;
-- configuration;
-- evaluation setup;
-- weekly quality review;
-- product access;
-- support.
+**MCP**, or Model Context Protocol, is an open way for AI applications to connect to external tools and information.
 
-Therefore, a service + software price is more appropriate than a cheap self-serve subscription.
+**SDK**, or software development kit, is a package that makes it easier for developers to integrate with a platform.
 
-## Recommended initial pricing ranges
-
-These are recommended starting points, not guarantees or market facts.
-
-### Option A — Design Partner Pilot
-
-For the first 1–2 customers when the main goal is learning and a case study.
-
-**One-time setup:** $750–$1,500
-
-**Monthly pilot:** $300–$750/month
-
-Use only if:
-
-- client gives fast feedback;
-- scope is narrow;
-- volume is low;
-- client agrees to be a reference/case-study candidate if successful.
-
-### Option B — Standard Managed Pilot
-
-More appropriate after the first proof.
-
-**One-time setup:** $1,500–$3,500
-
-**Monthly:** $750–$1,500/month
-
-Can include:
-
-- 5–20 agents;
-- support-ticket import;
-- internal search;
-- draft assistance;
-- weekly review;
-- reasonable usage limits.
-
-### Option C — Larger Team Pilot
-
-For a team requiring a real connector or more custom work.
-
-**One-time setup:** $3,000–$7,500+
-
-**Monthly:** $1,500–$4,000+
-
-Price depends heavily on:
-
-- ticket volume;
-- integration work;
-- number of agents;
-- support expectations;
-- custom workflows;
-- AI usage;
-- security requirements.
-
-Do not promise fixed enterprise pricing before understanding requirements.
+Excluding these features is not delivering a partial first product if they were never part of the first product promise. They are future product versions.
 
 ---
 
-# 10. Why these prices are reasonable to test
+# 6. V10b — Complete First Commercial Package
 
-The support-AI market already uses several payment models.
+The shortest route to revenue is not to begin another broad feature cycle immediately.
 
-Official vendor materials currently show examples such as:
+The shortest route is to enter a commercial hardening release:
 
-- Salesforce Agentforce for Service offering a per-conversation pricing path around $2 per conversation;
-- Freshworks documenting Freddy AI Agent session packs around $49 per 100 sessions in the referenced offering;
-- large contact-center suites charging materially more per user because they include voice, digital channels, workforce management, and large platform capabilities.
+# V10b — Complete First Commercial Package
 
-These products are much more mature than ResolveOps, so their prices should not be copied directly.
-
-The useful lesson is:
-
-> Customers are already accustomed to paying for support automation by agent, session, conversation, or business usage.
-
-Sources for current verification:
-
-- https://www.salesforce.com/in/service/ai/agentforce-for-service-pricing/
-- https://crmsupport.freshworks.com/support/solutions/articles/50000004664-freddy-ai-agent-and-chatbot-sessions-faqs
-- https://www.salesforce.com/service/contact-center/pricing/
-
-Always verify current pricing before using competitor numbers in a client conversation.
+Its job is to close the gap between the existing code and the ten-capability commercial package.
 
 ---
 
-# 11. Do not price only on AI token cost
+# 7. V10b workstream 1 — Freeze the exact package
 
-A common mistake is:
+For every capability, mark it as:
 
-> “The model costs $20, so charge $50.”
+- INCLUDED;
+- EXCLUDED;
+- COMPLETE;
+- NEEDS HARDENING;
+- MISSING.
 
-The client is paying for the outcome and operating service, not only model tokens.
+After this point, optional ideas cannot enter V10b.
 
-Your cost includes:
+This is a **feature freeze**: the team temporarily stops adding optional capabilities and focuses only on completing the launch scope.
 
-- development time;
-- onboarding;
-- monitoring;
-- support;
-- cloud hosting;
-- model usage;
-- data storage;
-- failed-run investigation;
-- weekly reporting;
-- future maintenance.
+Without a feature freeze, “ASAP” keeps moving farther away because every new feature creates new testing, security, documentation, and support work.
 
 ---
 
-# 12. Revenue path example
-
-This is an illustration, not a promise.
-
-Suppose after validation the product reaches:
-
-- 3 clients at $750/month = $2,250 MRR;
-- 5 clients at $1,000/month = $5,000 MRR;
-- 10 clients at $1,250/month = $12,500 MRR.
-
-**MRR** means **monthly recurring revenue**.
-
-The challenge is not the arithmetic.
-
-The challenge is delivering enough measurable value that customers renew.
-
-Retention matters more than signing clients who churn after one month.
-
----
-
-# 13. First-pilot technical work before go-live
-
-The following items should be completed before real customer-facing production usage.
-
-## Release hardening
-
-- update project docs;
-- add V5–V10a smoke tests;
-- add critical browser E2E test;
-- verify clean migrations;
-- verify staging deployment.
-
-## Operations
-
-- production monitoring;
-- alerts;
-- automated backup;
-- restore test;
-- incident procedure;
-- rollback process.
-
-## AI quality
-
-- client golden test set;
-- prompt-injection tests;
-- forced-handoff rules;
-- known unsupported-topic list.
-
-## Tool safety
-
-- keep high-risk tools disabled;
-- verify action logs;
-- require human approval for any real write action introduced during pilot.
-
----
-
-# 14. Fastest route if the first client uses Zendesk
-
-Do not build Zendesk, Freshdesk, and Intercom simultaneously.
-
-Build the connector the first paying client actually needs.
-
-If it is Zendesk:
-
-1. implement Zendesk authentication;
-2. import ticket data;
-3. handle pagination;
-4. handle incremental sync;
-5. store cursor;
-6. handle rate limits;
-7. retry temporary failures;
-8. expose sync health;
-9. add tests;
-10. add webhook later if needed.
-
-Then use that work as reusable product capability for later Zendesk customers.
-
-The first customer should drive the integration roadmap.
-
----
-
-# 15. 30-day pilot structure
-
-## Days 1–3 — Discovery and sample data
-
-- map support workflow;
-- receive sample ticket export;
-- define use case;
-- define success metrics;
-- define exclusions.
-
-## Days 4–7 — Configuration and evaluation
-
-- create workspace;
-- import sample;
-- configure redaction;
-- configure prompt;
-- build golden test set;
-- fix obvious retrieval/knowledge problems.
-
-## Days 8–14 — Internal agent testing
-
-- onboard 2–5 agents;
-- internal search;
-- draft mode;
-- collect feedback;
-- review failures daily.
-
-## Days 15–21 — Broader agent pilot
-
-- add more agents;
-- measure time saved;
-- improve knowledge;
-- fix common failure categories.
-
-## Days 22–30 — Optional limited customer exposure
-
-Only if internal quality gates are met.
-
-Enable a narrow topic/audience.
-
-At day 30, deliver a business review and expansion proposal.
-
-The exact timeline should follow client complexity. Quality gates matter more than calendar dates.
-
----
-
-# 16. Pilot success metrics
-
-Pick 3–5 primary measures.
-
-## Agent-assist pilot
-
-Possible metrics:
-
-- percentage of AI drafts accepted;
-- average edits required;
-- search time saved;
-- average response time;
-- agent satisfaction.
-
-## Customer-facing pilot
-
-Possible metrics:
-
-- resolution rate;
-- containment rate;
-- customer satisfaction;
-- handoff rate;
-- reopen rate;
-- wrong-answer rate.
-
-## Knowledge pilot
-
-Possible metrics:
-
-- failed questions reduced;
-- knowledge gaps identified;
-- new articles created;
-- retrieval success.
-
-Do not choose 30 metrics. Choose a few that support the business case.
-
----
-
-# 17. Create a before-versus-after baseline
-
-Before the pilot, measure current behavior.
-
-Example:
-
-- average search time: 4 minutes;
-- average first response: 45 minutes;
-- 20% of tickets need senior-agent help;
-- 30 repeated questions/week.
-
-After the pilot, compare.
-
-Without a baseline, it is difficult to prove ResolveOps caused improvement.
-
----
-
-# 18. Renewal conversation
-
-At the end of the pilot, do not ask:
-
-> “Do you like the product?”
-
-Ask:
-
-> “Did the measured value justify continuing?”
-
-Show:
-
-- usage;
-- quality;
-- agent feedback;
-- time saved;
-- gaps discovered;
-- customer-facing results if enabled;
-- cost;
-- next automation opportunity.
-
-Then offer a recurring plan.
-
----
-
-# 19. Transition from pilot to recurring plan
-
-## Managed Support Intelligence
-
-Example:
-
-- monthly platform access;
-- agent assistant;
-- customer widget for approved topics;
-- weekly/biweekly quality review;
-- knowledge-gap report;
-- monitored integration;
-- defined usage level.
-
-## Expansion add-ons later
-
-- real connector;
-- additional channel;
-- action automation;
-- custom reports;
-- additional workspace;
-- voice;
-- advanced security.
-
-Do not bundle every future feature into the cheapest package.
-
----
-
-# 20. Build a case study after success
-
-A case study should include real numbers with client permission.
-
-Structure:
-
-## Before
-
-- support team size;
-- problem;
-- current process.
-
-## Implementation
-
-- data imported;
-- use case;
-- rollout method.
-
-## Result
-
-- measured time saved;
-- quality;
-- adoption;
-- knowledge gaps;
-- customer outcome.
-
-## Quote
-
-Client-approved statement.
-
-A credible case study makes the second sale much easier.
-
----
-
-# 21. Repeatability test
-
-The first client can involve manual work.
-
-The second and third clients should reveal what needs to become productized.
-
-Track every manual onboarding step.
-
-Example:
-
-If every client requires manual CSV mapping, build a CSV mapping UI.
-
-If every client needs the same Zendesk setup, automate connector onboarding.
-
-If every client asks the same security questions, create a security trust center/document.
-
-This is how service work turns into software.
-
----
-
-# 22. Founder time economics
-
-A client paying $500/month is bad business if they require 20 hours/week of custom support.
-
-Track:
-
-- onboarding hours;
-- weekly support hours;
-- custom engineering hours;
-- model/cloud cost;
-- gross margin.
-
-**Gross margin** is roughly revenue minus direct costs required to deliver the service.
-
-Early pilots may have lower margin because learning is valuable.
-
-But the goal is for repeated onboarding and support effort to decrease.
-
----
-
-# 23. Churn prevention
-
-**Churn** means a customer stops paying.
-
-Common causes to watch:
-
-- product not used;
-- no measurable value;
-- too many wrong answers;
-- setup too complicated;
-- integration unreliable;
-- support too slow;
-- client champion leaves.
-
-Every month show the customer the value ResolveOps created.
-
-Do not wait for the customer to ask.
-
----
-
-# 24. Sales assets required
-
-Before serious outreach, prepare:
-
-- one-page product overview;
-- 5-minute demo;
-- 15-minute detailed demo;
-- architecture/security overview;
-- pilot proposal template;
-- pricing sheet;
-- FAQ;
-- limitations statement;
-- sample monthly report;
-- sample evaluation report.
-
-The documentation in this branch provides the foundation for those assets.
-
----
-
-# 25. Questions prospects will ask
-
-Prepare direct answers for:
-
-## “Does it replace Zendesk?”
-
-Recommended answer:
-
-> “Not initially. The first deployment is designed to work alongside your current support process. We start with support intelligence and agent assistance, then expand automation where the data proves it is safe and useful.”
-
-## “Does it hallucinate?”
-
-> “Any generative AI can make mistakes. ResolveOps is designed around retrieval from your support knowledge, citations, confidence/fallback, failed-query review, and human handoff. We also test against your real questions before rollout.”
-
-## “Can it issue refunds?”
-
-> “The tool framework supports controlled actions. For an early pilot, high-impact actions remain human-approved until the client-specific policy and evaluation process proves the automation is safe.”
-
-## “Can you integrate with our helpdesk?”
-
-> “The architecture supports connectors. We would scope and implement/validate the specific production connector your pilot requires rather than pretending every vendor integration is already production complete.”
-
----
-
-# 26. Go-to-market message
-
-Avoid broad language like:
-
-> “The future of customer service powered by autonomous AI.”
-
-Use a concrete message:
-
-> **ResolveOps helps support teams reuse what they already know. It turns historical tickets into searchable evidence, drafts cited responses, identifies weak AI answers, and hands uncertain conversations to people instead of pretending to know.**
-
-That message is understandable and aligned with the product.
-
----
-
-# 27. Commercial milestones
-
-## Milestone 1 — First paid discovery/pilot
-
-Someone pays for implementation and evaluation.
-
-## Milestone 2 — First recurring customer
-
-Pilot converts to monthly payment.
-
-## Milestone 3 — Second client with less manual work
-
-Proves some repeatability.
-
-## Milestone 4 — Three recurring clients
-
-Begin standardizing onboarding and pricing.
-
-## Milestone 5 — Case study
-
-Use measured results to improve sales.
-
-## Milestone 6 — Reliable integration path
-
-One or two helpdesk connectors become production quality.
-
-## Milestone 7 — Productized self-service onboarding
-
-Only after repeated demand justifies it.
-
----
-
-# 28. What not to build before first revenue
-
-Unless a paying prospect requires it, avoid delaying first revenue for:
-
-- complex billing platform;
-- ten AI providers;
-- voice;
-- mobile application;
-- every helpdesk connector;
-- full workforce management;
-- large marketplace;
-- advanced enterprise compliance portal;
-- dozens of cosmetic dashboard improvements.
-
-These may be useful later.
-
-They are not the shortest path to validating willingness to pay.
-
----
-
-# 29. Immediate execution checklist
-
-## Product hardening
-
-- [ ] Merge/update this documentation set.
-- [ ] Update root README/version status.
-- [ ] Build V5–V10a smoke tests.
-- [ ] Add later smoke tests to CI.
-- [ ] Add critical browser E2E.
-- [ ] Verify staging deployment.
-- [ ] Add monitoring/alerts.
-- [ ] Configure backup and test restore.
-- [ ] Add prompt-injection/adversarial tests.
-- [ ] Keep high-risk tools disabled or approval-only.
-
-## Sales preparation
-
-- [ ] Record 5-minute demo.
-- [ ] Create one-page pilot summary.
-- [ ] Create pilot proposal template.
-- [ ] Create starting price sheet.
-- [ ] Identify 50 target support leaders/founders.
-- [ ] Send personalized outreach.
-- [ ] Book discovery calls.
-
-## First-client delivery
-
-- [ ] Define one use case.
-- [ ] Get sample data.
-- [ ] Build evaluation set.
-- [ ] Run internal pilot.
-- [ ] Measure baseline vs result.
-- [ ] Deliver monthly/30-day report.
-- [ ] Ask for recurring conversion.
-
----
-
-# 30. Final recommendation
-
-The product does not need to become perfect before earning money.
-
-It needs to become **reliable for one narrow paid promise**.
-
-The strongest promise today is not:
-
-> “We automate your entire support operation.”
+# 8. V10b workstream 2 — Complete end-to-end validation
+
+The current Docker smoke tests cover V1 through V4. That is not enough for the commercial package because major paid-package capabilities were added later.
+
+Create one commercial-release smoke test covering the sold journey:
+
+1. start from a clean environment;
+2. migrate the database;
+3. register an administrator;
+4. create or select a workspace;
+5. create another workspace and prove isolation;
+6. upload support data;
+7. ask an evidence-backed question;
+8. verify citations;
+9. ask an unsupported question;
+10. verify safe fallback;
+11. create customer/conversation context;
+12. perform a human handoff;
+13. verify reliability data;
+14. verify analytics;
+15. verify report/export scoping;
+16. verify security-sensitive operations;
+17. restart services and prove important data remains available.
+
+The commercial question is not “does every historical version have a separate smoke script?”
 
 It is:
 
-> **“We help your support team find better answers from its own historical knowledge, draft evidence-backed responses, measure AI failures, and improve the knowledge base. We start with humans in control and expand automation only after the data proves it works.”**
+> “Does the product we are selling work from beginning to end?”
 
-That is sellable, credible, and aligned with what ResolveOps has actually built.
+---
 
-Regular income comes from delivering that value repeatedly, not from the GitHub deployment itself.
+# 9. V10b workstream 3 — Frontend critical-flow testing
+
+Add tests for every screen needed by the commercial package, including login/account, workspace behavior, upload, support search, agent assistance, conversations, customer context, handoffs, reliability, analytics/reports, and required administrator settings.
+
+Also add at least one browser-level end-to-end test.
+
+A browser-level test opens the website like a real user and clicks through the important workflow.
+
+---
+
+# 10. V10b workstream 4 — Production deployment proof
+
+Before sale:
+
+1. deploy the exact release candidate;
+2. verify database creation and migration;
+3. verify HTTPS;
+4. verify frontend-backend communication;
+5. verify environment secrets;
+6. verify authentication;
+7. verify workspace isolation;
+8. verify AI provider access;
+9. verify import;
+10. verify critical workflows;
+11. verify restart behavior;
+12. document rollback.
+
+The sales demonstration should use this release or a faithful staging copy of it.
+
+---
+
+# 11. V10b workstream 5 — Monitoring and alerting
+
+Before sale, monitor at least application availability, backend errors, database failures, AI provider failures, slow requests, failed imports, important job failures, authentication problems, and unusual security/rate-limit activity.
+
+An **alert** is an automatic notification to the person responsible when something important fails.
+
+---
+
+# 12. V10b workstream 6 — Backup and restore
+
+Before sale:
+
+1. enable automated database backup;
+2. define how long backups are kept;
+3. restore a backup into a clean environment;
+4. verify important records;
+5. write down recovery steps;
+6. define recovery ownership.
+
+If we have never restored the backup, we do not truly know whether we can recover the product.
+
+---
+
+# 13. V10b workstream 7 — Security acceptance
+
+Before charging a client, explicitly test unauthenticated access, wrong-role access, cross-workspace access, exports, API keys if used, login abuse controls, sensitive information, malicious input, prompt-injection attempts, and public-widget exposure if the widget is included.
+
+A **prompt-injection attempt** is text designed to manipulate the AI into ignoring intended instructions or revealing information it should not reveal.
+
+For the first commercial package, high-impact autonomous actions should remain outside scope unless their entire production safety model is complete.
+
+---
+
+# 14. V10b workstream 8 — Real AI production configuration
+
+Choose and validate the production provider, model, fallback behavior, cost limits, timeout, retry behavior, confidence thresholds, active prompt version, data-sharing policy, and logging policy.
+
+Test the configuration on realistic customer-support questions.
+
+Do not use the deterministic mock provider as evidence that real model quality is acceptable.
+
+---
+
+# 15. V10b workstream 9 — Client onboarding package
+
+Before selling, prepare a repeatable onboarding process covering the data required from the client, users, issue categories, restricted topics, escalation rules, retention requirements, security contacts, workspace configuration, AI settings, evaluation questions, permission verification, manager reporting, and support ownership.
+
+---
+
+# 16. V10b workstream 10 — Operating and support runbook
+
+A **runbook** is a written procedure explaining how to operate or recover a system.
+
+Document starting/restarting services, database migration, user administration, workspace administration, AI configuration, backup, restore, incident response, disabling AI temporarily, rotating secrets, investigating failures, rollback, and client communication during incidents.
+
+---
+
+# 17. Exact launch gate
+
+ResolveOps should not be sold as the first complete commercial package until every applicable gate is green.
+
+## Product gate
+
+- Every included capability works.
+- Required failure behavior works.
+- No mock capability is advertised as real.
+
+## Data gate
+
+- Workspace isolation passes.
+- Supported import works.
+- Sensitive-data rules are tested.
+
+## AI gate
+
+- Production model is configured.
+- Realistic evaluation passes agreed thresholds.
+- Citations work.
+- Safe fallback works.
+
+## Security gate
+
+- Authentication and authorization work.
+- Cross-workspace access fails.
+- Security-critical tests pass.
+
+## Testing gate
+
+- Backend tests pass.
+- Frontend critical-flow tests pass.
+- Commercial smoke test passes.
+- Browser end-to-end test passes.
+
+## Operations gate
+
+- Production deployment works.
+- Monitoring and alerts work.
+- Backup works.
+- Restore has been tested.
+- Rollback and incident procedures exist.
+
+## Commercial gate
+
+- Exact included feature list is frozen.
+- Exact excluded feature list is written.
+- Pricing corresponds to the complete package.
+- Demo matches production behavior.
+- Proposal makes no claim beyond the release.
+
+Only then should we charge for this package.
+
+---
+
+# 18. Who the first client should be
+
+The best first customer should fit the package we can finish fastest.
+
+Recommended profile:
+
+- B2B SaaS or technology company;
+- roughly 5–30 support users;
+- meaningful historical support data;
+- recurring support questions;
+- accessible support lead;
+- ability to provide a safe support-data export;
+- no requirement for complex regulated-data handling in the initial use case.
+
+Avoid making the first commercial release depend on the hardest possible customer, such as an organization requiring complex healthcare compliance, banking-grade controls, government accreditation, many mandatory integrations, regional data-residency commitments, or extreme uptime guarantees.
+
+Those can be later markets after the required package for those markets is fully complete.
+
+---
+
+# 19. Handling a prospect that wants more
+
+If the prospect needs a capability outside the completed package:
+
+### If it is genuinely required for that client’s promised outcome
+
+Add it to the required package and complete it before selling the revised package.
+
+### If it is useful but optional
+
+Keep it outside the current package and state that clearly.
+
+### If it should become a standard ResolveOps capability
+
+Put it into the next commercial version and finish that version completely before advertising it as included.
+
+What we should not do:
+
+> Promise 12, deliver 10, charge for 10/12, and carry two unfinished promises into production.
+
+---
+
+# 20. Pricing under the complete-before-charge model
+
+Pricing should describe a full completed package, not a percentage of unfinished feature count.
+
+A future structure could be:
+
+- **Package A — Support Intelligence and Agent Assistance**;
+- **Package B — Connected Support Operations** with completed real connectors;
+- **Package C — Controlled Action Automation** with completed production actions and approvals;
+- **Package D — Omnichannel Support** with completed messaging/voice channels.
+
+Each package can cost more because it provides more completed value. Each package should itself be complete when sold.
+
+---
+
+# 21. Devil’s-advocate warning: do not turn “complete” into “infinite”
+
+The complete-before-charge philosophy has one major danger: the definition of “complete” can grow forever.
+
+To prevent that:
+
+- completeness applies to the sold package, not the entire imaginable product;
+- the first package must solve one painful problem completely;
+- optional new features cannot enter after feature freeze;
+- every launch blocker must have an objective completion test;
+- “nice to have” is not the same as “required to deliver the promise.”
+
+The strongest rule is:
+
+> **Everything promised must be complete; not everything imaginable must be promised.**
+
+---
+
+# 22. What “ASAP” should mean
+
+“ASAP” should mean removing work that does not help complete the first sellable package.
+
+During V10b, focus on launch blockers, defects, security, end-to-end tests, deployment, monitoring, backup/restore, documentation, onboarding, and support procedures.
+
+Do not distract the release with random dashboards, every future connector, voice because it looks impressive, subscription billing before it is needed, marketplace infrastructure, or optional AI experiments.
+
+ASAP means **maximum focus**, not maximum shortcuts.
+
+---
+
+# 23. Discovery can happen before sale
+
+We can talk to prospects while finishing V10b. Customer discovery is not the same as charging for incomplete promised delivery.
+
+Use discovery to validate whether the package solves a real problem and to learn which import path, security requirements, and success metrics matter most.
+
+Do not promise unfinished functionality during those conversations.
+
+---
+
+# 24. The first client receives the same product that was demonstrated
+
+Onboarding may include configuration such as workspace creation, users, client data import, thresholds, and retention settings.
+
+Configuration is normal.
+
+Building missing promised core functionality after charging the client is not.
+
+The first client should receive:
+
+- exact included capabilities;
+- exact excluded capabilities;
+- administrator instructions;
+- user instructions;
+- support process;
+- security summary;
+- retention summary;
+- known limitations;
+- incident process;
+- exact product version.
+
+---
+
+# 25. Final commercial principle
+
+The ResolveOps launch strategy is:
+
+> **Promise a clearly bounded product. Complete every promised capability. Validate the full user journey. Deploy and operate it responsibly. Then charge for the entire completed package.**
+
+Not:
+
+> “Here are ten promised features; eight work, so pay us for eight.”
+
+And not:
+
+> “We cannot sell anything until every possible future ResolveOps feature is built.”
+
+The target is:
+
+> **the smallest valuable product that is 100% complete inside its promise.**
